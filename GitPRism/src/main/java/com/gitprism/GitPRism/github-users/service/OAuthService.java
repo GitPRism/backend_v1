@@ -31,7 +31,7 @@ public class OAuthService {
 
   public String generateGitHubLoginUrl() {
     return String.format(
-        "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=user",
+        "https://github.com/login/oauth/authorize?client_id=%s&redirect_uri=%s&scope=user%%20repo",
         clientId, redirectUri
     );
   }
