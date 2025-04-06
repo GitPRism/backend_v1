@@ -6,6 +6,7 @@ import lombok.Getter;
 @Getter
 @Builder
 public class LoginResponseDto {
+  private Long id; // ← PK 추가
   private String token;
   private String githubId;
   private String username;

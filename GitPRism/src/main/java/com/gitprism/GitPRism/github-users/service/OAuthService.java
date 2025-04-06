@@ -109,6 +109,7 @@ public class OAuthService {
         .githubId(user.getGithubId())
         .username(user.getUsername())
         .email(user.getEmail())
+        .id(user.getId())
         .build();
   }
 }
