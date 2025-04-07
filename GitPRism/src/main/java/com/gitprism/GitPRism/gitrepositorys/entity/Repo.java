@@ -1,4 +1,4 @@
-package com.gitprism.GitPRism.repositorys.entity;
+package com.gitprism.GitPRism.gitrepositorys.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,7 +23,10 @@ public class Repo {
     private Long id;
 
     @Column(name = "git_id")
-    private String githubId; // 또는 userId 등 일치되는 이름
+    private String gitId;
+
+    @Column(name = "github_id")
+    private String githubId;
 
     @Column(name = "repo_name", length = 255)
     private String repoName;

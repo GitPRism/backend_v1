@@ -1,4 +1,4 @@
-package com.gitprism.GitPRism.repositorys.dto.request;
+package com.gitprism.GitPRism.gitrepositorys.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Getter;

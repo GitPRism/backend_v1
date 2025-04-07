@@ -1,8 +1,8 @@
-package com.gitprism.GitPRism.repositorys.service;
+package com.gitprism.GitPRism.gitrepositorys.service;
 
-import com.gitprism.GitPRism.repositorys.dto.response.GitHubRepoResponse;
-import com.gitprism.GitPRism.repositorys.entity.Repo;
-import com.gitprism.GitPRism.repositorys.repository.RepoRepository;
+import com.gitprism.GitPRism.gitrepositorys.dto.response.GitHubRepoResponse;
+import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
+import com.gitprism.GitPRism.gitrepositorys.repository.RepoRepository;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -101,7 +101,8 @@ public class GitHubRepoService {
                     Repo repo = existingRepo.orElse(Repo.builder().githubRepoId(githubRepoId).build());
 
                     repo.setRepoName(name);
-                    repo.setGithubId(user.getUsername());
+                    repo.setGitId(user.getUsername());        // ✅ git_id ← 유저네임 (예: john123)
+                    repo.setGithubId(user.getGithubId());
                     repo.setDescription(description);
                     repo.setUrl(url);
                     repo.setVisibility(visibility);

@@ -1,6 +1,6 @@
-package com.gitprism.GitPRism.repositorys.repository;
+package com.gitprism.GitPRism.gitrepositorys.repository;
 
-import com.gitprism.GitPRism.repositorys.entity.Repo;
+import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
