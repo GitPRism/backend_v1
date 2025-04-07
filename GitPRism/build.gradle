@@ -41,6 +41,8 @@ dependencies {
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.1.0' // swagger
 	implementation 'org.flywaydb:flyway-core:11.4.0' // flyway
+	implementation 'org.json:json:20230227'
+	implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }
 
 tasks.named('test') {

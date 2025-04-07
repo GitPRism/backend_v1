@@ -1,7 +1,7 @@
-package com.gitprism.GitPRism.repositorys.controller;
+package com.gitprism.GitPRism.gitrepositorys.controller;
 
-import com.gitprism.GitPRism.repositorys.dto.response.GitHubRepoResponse;
-import com.gitprism.GitPRism.repositorys.service.GitHubRepoService;
+import com.gitprism.GitPRism.gitrepositorys.dto.response.GitHubRepoResponse;
+import com.gitprism.GitPRism.gitrepositorys.service.GitHubRepoService;
 import io.swagger.v3.oas.annotations.Operation;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;

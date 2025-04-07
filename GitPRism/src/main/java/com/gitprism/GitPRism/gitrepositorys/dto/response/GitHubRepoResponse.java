@@ -1,6 +1,6 @@
-package com.gitprism.GitPRism.repositorys.dto.response;
+package com.gitprism.GitPRism.gitrepositorys.dto.response;
 
-import com.gitprism.GitPRism.repositorys.entity.Repo;
+import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import lombok.Builder;
 import lombok.Getter;
 

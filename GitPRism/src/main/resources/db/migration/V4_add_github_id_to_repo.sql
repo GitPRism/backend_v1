@@ -1,0 +1,1 @@
+ALTER TABLE repo ADD COLUMN github_id VARCHAR(255);
