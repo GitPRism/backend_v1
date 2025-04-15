@@ -49,4 +49,9 @@ public class Comment {
             .isDeleted(false)
             .build();
     }
+
+    public void update(String newComment) {
+        this.comment = newComment;
+        this.updatedAt = LocalDateTime.now(); // 또는 @LastModifiedDate로 자동처리
+    }
 }

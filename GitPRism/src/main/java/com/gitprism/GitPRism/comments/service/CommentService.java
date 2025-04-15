@@ -15,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.*;
+import lombok.*;
 
 @Service
 @RequiredArgsConstructor
@@ -65,6 +66,30 @@ public class CommentService {
     response.put("portfolio_id", portfolioId);
     response.put("contentCount", commentDtoList.size());
     response.put("data", commentDtoList);
+
+    return response;
+  }
+
+  @Transactional
+  public Map<String, Object> updateComment(Long commentId, String githubId, CommentRequestDto dto) {
+    Comment comment = commentRepository.findById(commentId)
+        .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다."));
+
+    if (!comment.getUser().getGithubId().equals(githubId)) {
+      throw new SecurityException("본인의 댓글만 수정할 수 있습니다.");
+    }
+
+    comment.update(dto.getComment());  // 댓글 내용만 수정
+
+    // CommentResponseDto 생성
+    CommentResponseDto responseDto = CommentResponseDto.of(comment, comment.getUser().getUsername());
+
+    // 응답 포장
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("message", "댓글 수정 완료");
+    response.put("code", 200);
+    response.put("commentId", comment.getId());
+    response.put("data", responseDto);  // ✅ 유지한 DTO 그대로
 
     return response;
   }

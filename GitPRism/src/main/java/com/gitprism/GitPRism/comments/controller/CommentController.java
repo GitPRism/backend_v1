@@ -35,4 +35,15 @@ public class CommentController {
   public ResponseEntity<Map<String, Object>> getComments(@PathVariable Long portfolioId) {
     return ResponseEntity.ok(commentService.getCommentsByPortfolioId(portfolioId));
   }
+
+  @PutMapping("/api/v1/comments/{commentId}")
+  public ResponseEntity<Map<String, Object>> updateComment(
+      @PathVariable Long commentId,
+      @RequestBody @Valid CommentRequestDto requestDto,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    Map<String, Object> updated = commentService.updateComment(commentId, githubId, requestDto);
+    return ResponseEntity.ok(updated);
+  }
 }
