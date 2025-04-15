@@ -1,4 +1,4 @@
-CREATE TABLE IF NOT EXISTS git_hub_user (
+CREATE TABLE IF NOT EXISTS github_users (
                                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                             github_id VARCHAR(255) NOT NULL,
                                             username VARCHAR(255),
