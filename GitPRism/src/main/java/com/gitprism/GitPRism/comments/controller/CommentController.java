@@ -46,4 +46,14 @@ public class CommentController {
     Map<String, Object> updated = commentService.updateComment(commentId, githubId, requestDto);
     return ResponseEntity.ok(updated);
   }
+
+  @DeleteMapping("/api/v1/comments/{commentId}")
+  public ResponseEntity<Map<String, Object>> deleteComment(
+      @PathVariable Long commentId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    Map<String, Object> result = commentService.deleteComment(commentId, githubId);
+    return ResponseEntity.ok(result);
+  }
 }

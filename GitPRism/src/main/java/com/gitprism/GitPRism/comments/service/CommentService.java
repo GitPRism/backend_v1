@@ -9,7 +9,10 @@ import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
+import com.gitprism.GitPRism.comments.dto.CommentListResponseDto;
+
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,8 +59,8 @@ public class CommentService {
 
     List<Comment> comments = commentRepository.findByPortfolioAndIsDeletedFalseOrderByCreatedAtDesc(portfolio);
 
-    List<CommentResponseDto> commentDtoList = comments.stream()
-        .map(comment -> CommentResponseDto.of(comment, comment.getUser().getUsername()))
+    List<CommentListResponseDto> commentDtoList = comments.stream()
+        .map(comment -> CommentListResponseDto.of(comment, comment.getUser().getUsername()))
         .toList();
 
     Map<String, Object> response = new LinkedHashMap<>();
@@ -73,7 +76,8 @@ public class CommentService {
   @Transactional
   public Map<String, Object> updateComment(Long commentId, String githubId, CommentRequestDto dto) {
     Comment comment = commentRepository.findById(commentId)
-        .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다."));
+        .filter(c -> !c.getIsDeleted())
+        .orElseThrow(() -> new NoSuchElementException("존재하지 않거나 삭제된 댓글입니다."));
 
     if (!comment.getUser().getGithubId().equals(githubId)) {
       throw new SecurityException("본인의 댓글만 수정할 수 있습니다.");
@@ -91,6 +95,24 @@ public class CommentService {
     response.put("commentId", comment.getId());
     response.put("data", responseDto);  // ✅ 유지한 DTO 그대로
 
+    return response;
+  }
+
+  @Transactional
+  public Map<String, Object> deleteComment(Long commentId, String githubId) {
+    Comment comment = commentRepository.findById(commentId)
+        .orElseThrow(() -> new NoSuchElementException("댓글을 찾을 수 없습니다."));
+
+    if (!comment.getUser().getGithubId().equals(githubId)) {
+      throw new SecurityException("본인의 댓글만 삭제할 수 있습니다.");
+    }
+
+    comment.softDelete();
+
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("message", "댓글 삭제 완료");
+    response.put("code", 200);
+    response.put("commentId", comment.getId());
     return response;
   }
 }
