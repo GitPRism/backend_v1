@@ -24,6 +24,7 @@ repositories {
 }
 
 dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -43,6 +44,7 @@ dependencies {
 	implementation 'org.flywaydb:flyway-core:11.4.0' // flyway
 	implementation 'org.json:json:20230227'
 	implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+	implementation 'org.springframework.boot:spring-boot-starter-validation'
 }
 
 tasks.named('test') {
