@@ -15,4 +15,6 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
   // 알림 발행 등을 위한 엔티티 조회
   Optional<Like> findByUserAndPortfolioAndIsDeletedFalse(GitHubUser user, Portfolio portfolio);
 
+  Optional<Like> findByUserAndPortfolio(GitHubUser user, Portfolio portfolio);
+
 }

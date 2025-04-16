@@ -50,4 +50,9 @@ public class Like {
     this.isDeleted = true;
     this.updatedAt = LocalDateTime.now();
   }
+
+  public void recover() {
+    this.isDeleted = false;
+    this.updatedAt = LocalDateTime.now();
+  }
 }
