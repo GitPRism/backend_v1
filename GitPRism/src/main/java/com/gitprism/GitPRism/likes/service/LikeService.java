@@ -60,4 +60,26 @@ public class LikeService {
 
     return response;
   }
+
+  @Transactional
+  public Map<String, Object> cancelLike(Long portfolioId, String githubId) {
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Portfolio portfolio = portfolioRepository.findById(portfolioId)
+        .orElseThrow(() -> new NoSuchElementException("포트폴리오를 찾을 수 없습니다."));
+
+    Like like = likeRepository.findByUserAndPortfolioAndIsDeletedFalse(user, portfolio)
+        .orElseThrow(() -> new NoSuchElementException("좋아요 기록이 존재하지 않습니다."));
+
+    like.delete();
+
+    Map<String, Object> response = new LinkedHashMap<>();
+    response.put("message", "좋아요가 취소되었습니다.");
+    response.put("code", 200);
+    response.put("portfolio_id", portfolioId);
+    response.put("user_id", user.getId());
+
+    return response;
+  }
 }
