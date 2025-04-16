@@ -36,33 +36,29 @@ public class LikeService {
     Portfolio portfolio = portfolioRepository.findById(portfolioId)
         .orElseThrow(() -> new NoSuchElementException("포트폴리오를 찾을 수 없습니다."));
 
-    // 🔍 삭제된 좋아요 포함하여 조회
     Like like = likeRepository.findByUserAndPortfolio(user, portfolio).orElse(null);
 
     if (like != null) {
       if (Boolean.FALSE.equals(like.getIsDeleted())) {
         throw new IllegalStateException("이미 좋아요를 눌렀습니다.");
       }
-      // ✅ 소프트 삭제 복구
-      like.recover();
+      like.recover(); // isDeleted = false, updatedAt 수정
     } else {
-      // ✅ 새로 등록
       like = Like.create(user, portfolio);
       likeRepository.save(like);
     }
 
-    // 🔔 이벤트 발행 (알림 전송용)
+    // 🔔 알림 전송
     eventPublisher.publishEvent(new LikeCreatedEvent(like));
 
-    // ✅ 응답 반환
-    Map<String, Object> response = new LinkedHashMap<>();
-    response.put("message", "좋아요가 등록되었습니다.");
-    response.put("code", 201);
-    response.put("portfolio_id", portfolioId);
-    response.put("user_id", user.getId());
-
-    return response;
+    return Map.of(
+        "message", "좋아요가 추가되었습니다.",
+        "code", 201,
+        "portfolio_id", portfolioId,
+        "user_id", user.getId()
+    );
   }
+
 
   @Transactional
   public Map<String, Object> cancelLike(Long portfolioId, String githubId) {
