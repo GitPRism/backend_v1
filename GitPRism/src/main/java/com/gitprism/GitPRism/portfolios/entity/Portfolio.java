@@ -2,7 +2,7 @@ package com.gitprism.GitPRism.portfolios.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
-
+import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,8 +17,10 @@ public class Portfolio {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  @Column(name = "user_id", nullable = false)
-  private Long userId;
+  // ManyToOne으로 작성자 참조
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "user_id", nullable = false)
+  private GitHubUser user;
 
   private String title;
   private String description;
