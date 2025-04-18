@@ -6,11 +6,14 @@ import com.gitprism.GitPRism.bookmarks.entity.Bookmark;
 import com.gitprism.GitPRism.notification.entity.Notification;
 import com.gitprism.GitPRism.notification.entity.NotificationType;
 import com.gitprism.GitPRism.notification.repository.NotificationRepository;
-
+import com.gitprism.GitPRism.github_users.entity.GitHubUser;
+import com.gitprism.GitPRism.notification.dto.NotificationListResponse;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import java.util.List;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -53,5 +56,25 @@ public class NotificationService {
         "/portfolios/" + bookmark.getPortfolio().getId()
     );
     notificationRepository.save(notification);
+  }
+
+  @Transactional(readOnly = true)
+  public NotificationListResponse getMyNotifications(GitHubUser user) {
+    List<Notification> notifications = notificationRepository
+        .findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(user.getId());
+
+    List<NotificationListResponse.NotificationDto> results = notifications.stream()
+        .map(n -> new NotificationListResponse.NotificationDto(
+            n.getId(),
+            n.getType(),
+            n.getMessage(),
+            n.getPortfolio().getId(),
+            n.getRedirectUrl(),
+            n.getIsRead(),
+            n.getCreatedAt()
+        ))
+        .toList();
+
+    return new NotificationListResponse("알림 목록 조회 성공", 200, results);
   }
 }
