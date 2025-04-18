@@ -7,6 +7,8 @@ import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
+import com.gitprism.GitPRism.likes.dto.LikeCountResponse;
+
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -80,5 +82,16 @@ public class LikeService {
     response.put("user_id", user.getId());
 
     return response;
+  }
+
+  @Transactional(readOnly = true)
+  public LikeCountResponse getLikeCount(Long portfolioId) {
+    boolean exists = portfolioRepository.existsById(portfolioId);
+    if (!exists) {
+      throw new NoSuchElementException("포트폴리오가 존재하지 않습니다.");
+    }
+
+    int count = likeRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
+    return new LikeCountResponse("좋아요 수 조회 성공", 200, portfolioId, count);
   }
 }

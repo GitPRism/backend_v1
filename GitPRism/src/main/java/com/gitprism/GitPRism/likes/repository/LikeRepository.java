@@ -11,7 +11,8 @@ public interface LikeRepository extends JpaRepository<Like, Long> {
 
   // 소프트 삭제 고려해서 중복 여부 확인
   boolean existsByUserAndPortfolioAndIsDeletedFalse(GitHubUser user, Portfolio portfolio);
-
+  // 좋아요 수 조회용 메서드 추가
+  int countByPortfolioIdAndIsDeletedFalse(Long portfolioId);
   // 알림 발행 등을 위한 엔티티 조회
   Optional<Like> findByUserAndPortfolioAndIsDeletedFalse(GitHubUser user, Portfolio portfolio);
 

@@ -2,6 +2,8 @@ package com.gitprism.GitPRism.likes.controller;
 
 import com.gitprism.GitPRism.likes.service.LikeService;
 import com.gitprism.GitPRism.config.jwt.JwtTokenProvider;
+import com.gitprism.GitPRism.likes.dto.LikeCountResponse;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import lombok.RequiredArgsConstructor;
@@ -41,5 +43,14 @@ public class LikeController {
     String githubId = jwtTokenProvider.getGithubIdFromToken(token.replace("Bearer ", "").trim());
     Map<String, Object> result = likeService.cancelLike(portfolioId, githubId);
     return ResponseEntity.ok(result);
+  }
+
+  @GetMapping("/{portfolioId}/likes")
+  @Operation(summary = "좋아요 수 조회", description = "특정 포트폴리오의 좋아요 수를 조회합니다.")
+  public ResponseEntity<LikeCountResponse> getLikeCount(
+      @PathVariable Long portfolioId
+  ) {
+    LikeCountResponse response = likeService.getLikeCount(portfolioId);
+    return ResponseEntity.ok(response);
   }
 }
