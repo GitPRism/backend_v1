@@ -2,6 +2,7 @@ package com.gitprism.GitPRism.bookmarks.controller;
 
 import com.gitprism.GitPRism.bookmarks.service.BookmarkService;
 import com.gitprism.GitPRism.bookmarks.dto.BookmarkListResponse;
+import com.gitprism.GitPRism.bookmarks.dto.BookmarkStatusResponse;
 import com.gitprism.GitPRism.config.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +33,16 @@ public class BookmarkController {
   public ResponseEntity<BookmarkListResponse> getMyBookmarks(Authentication authentication) {
     String githubId = authentication.getName();
     BookmarkListResponse response = bookmarkService.getMyBookmarks(githubId);
+    return ResponseEntity.ok(response);
+  }
+
+  @GetMapping("/portfolios/{portfolioId}/bookmark")
+  public ResponseEntity<BookmarkStatusResponse> getBookmarkStatus(
+      @PathVariable Long portfolioId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    BookmarkStatusResponse response = bookmarkService.getBookmarkStatus(portfolioId, githubId);
     return ResponseEntity.ok(response);
   }
 

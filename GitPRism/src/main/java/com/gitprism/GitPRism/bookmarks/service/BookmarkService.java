@@ -8,6 +8,7 @@ import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.bookmarks.event.BookmarkCreatedEvent;
 import com.gitprism.GitPRism.bookmarks.dto.BookmarkListResponse;
+import com.gitprism.GitPRism.bookmarks.dto.BookmarkStatusResponse;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -99,6 +100,19 @@ public class BookmarkService {
         .toList();
 
     return new BookmarkListResponse("북마크 목록 조회 성공", 200, result);
+  }
+
+  @Transactional(readOnly = true)
+  public BookmarkStatusResponse getBookmarkStatus(Long portfolioId, String githubId) {
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Portfolio portfolio = portfolioRepository.findById(portfolioId)
+        .orElseThrow(() -> new NoSuchElementException("포트폴리오를 찾을 수 없습니다."));
+
+    boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
+
+    return new BookmarkStatusResponse("북마크 여부 조회 성공", 200, portfolioId, bookmarked);
   }
 
 }
