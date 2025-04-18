@@ -26,4 +26,13 @@ public class BookmarkController {
     Map<String, Object> result = bookmarkService.addBookmark(portfolioId, githubId);
     return ResponseEntity.status(201).body(result);
   }
+  @DeleteMapping("/{portfolioId}/bookmarks")
+  public ResponseEntity<Map<String, Object>> cancelBookmark(
+      @PathVariable Long portfolioId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    Map<String, Object> result = bookmarkService.cancelBookmark(portfolioId, githubId);
+    return ResponseEntity.ok(result);
+  }
 }

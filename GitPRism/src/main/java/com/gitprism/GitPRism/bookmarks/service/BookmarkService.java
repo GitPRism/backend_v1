@@ -54,4 +54,30 @@ public class BookmarkService {
         "user_id", user.getId()
     );
   }
+
+  @Transactional
+  public Map<String, Object> cancelBookmark(Long portfolioId, String githubId) {
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Portfolio portfolio = portfolioRepository.findById(portfolioId)
+        .orElseThrow(() -> new NoSuchElementException("포트폴리오를 찾을 수 없습니다."));
+
+    Bookmark bookmark = bookmarkRepository.findByUserAndPortfolio(user, portfolio)
+        .orElseThrow(() -> new NoSuchElementException("북마크 기록이 존재하지 않습니다."));
+
+    if (bookmark.isDeleted()) {
+      throw new IllegalStateException("이미 취소된 북마크입니다.");
+    }
+
+    bookmark.delete();
+
+    return Map.of(
+        "message", "북마크가 취소되었습니다.",
+        "code", 200,
+        "portfolio_id", portfolioId,
+        "user_id", user.getId()
+    );
+  }
+
 }
