@@ -7,12 +7,14 @@ import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.bookmarks.event.BookmarkCreatedEvent;
+import com.gitprism.GitPRism.bookmarks.dto.BookmarkListResponse;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.context.ApplicationEventPublisher;
 
+import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 
@@ -78,6 +80,25 @@ public class BookmarkService {
         "portfolio_id", portfolioId,
         "user_id", user.getId()
     );
+  }
+
+  @Transactional(readOnly = true)
+  public BookmarkListResponse getMyBookmarks(String githubId) {
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    List<Bookmark> bookmarks = bookmarkRepository.findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(user);
+
+    List<BookmarkListResponse.BookmarkSimpleDto> result = bookmarks.stream()
+        .map(b -> new BookmarkListResponse.BookmarkSimpleDto(
+            b.getPortfolio().getId(),
+            b.getPortfolio().getTitle(),
+            b.getPortfolio().getDescription(),
+            b.getCreatedAt()
+        ))
+        .toList();
+
+    return new BookmarkListResponse("북마크 목록 조회 성공", 200, result);
   }
 
 }
