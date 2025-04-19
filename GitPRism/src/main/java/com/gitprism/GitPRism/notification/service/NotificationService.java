@@ -8,12 +8,16 @@ import com.gitprism.GitPRism.notification.entity.NotificationType;
 import com.gitprism.GitPRism.notification.repository.NotificationRepository;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.notification.dto.NotificationListResponse;
+
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.stereotype.Service;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
+
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -76,5 +80,27 @@ public class NotificationService {
         .toList();
 
     return new NotificationListResponse("알림 목록 조회 성공", 200, results);
+  }
+
+  @Transactional
+  public Map<String, Object> markAsRead(Long notificationId, GitHubUser user) {
+    Notification notification = notificationRepository.findById(notificationId)
+        .orElseThrow(() -> new NoSuchElementException("알림을 찾을 수 없습니다."));
+
+    if (!notification.getUser().getId().equals(user.getId())) {
+      throw new IllegalArgumentException("본인의 알림만 읽음 처리할 수 있습니다.");
+    }
+
+    if (notification.getIsDeleted()) {
+      throw new IllegalStateException("삭제된 알림은 처리할 수 없습니다.");
+    }
+
+    notification.markAsRead();
+
+    return Map.of(
+        "message", "알림이 읽음 처리되었습니다.",
+        "code", 200,
+        "notificationId", notification.getId()
+    );
   }
 }

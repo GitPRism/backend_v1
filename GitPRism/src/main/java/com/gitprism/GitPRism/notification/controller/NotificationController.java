@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.NoSuchElementException;
+import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
@@ -27,4 +28,18 @@ public class NotificationController {
 
     return ResponseEntity.ok(notificationService.getMyNotifications(user));
   }
+
+  @PatchMapping("/{notificationId}/read")
+  public ResponseEntity<Map<String, Object>> markAsRead(
+      @PathVariable Long notificationId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Map<String, Object> result = notificationService.markAsRead(notificationId, user);
+    return ResponseEntity.ok(result);
+  }
+
 }
