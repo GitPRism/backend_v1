@@ -42,6 +42,8 @@ public class PullRequest {
     @Column(columnDefinition = "TEXT")
     private String labels;
 
+    private Long repoId;
+
     @Builder.Default
     private Boolean isDeleted = false;
 }
