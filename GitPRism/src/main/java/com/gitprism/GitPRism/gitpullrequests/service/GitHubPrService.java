@@ -102,6 +102,7 @@ public class GitHubPrService {
                     pullRequest.setTargetBranch(targetBranch);
                     pullRequest.setHtmlUrl(htmlUrl);
                     pullRequest.setLabels(labels);
+                    pullRequest.setRepoId(repo.getId());
                     pullRequestRepository.save(pullRequest);
 
 

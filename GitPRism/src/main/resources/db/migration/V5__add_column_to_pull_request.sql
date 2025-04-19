@@ -16,5 +16,6 @@ CREATE TABLE pull_requests (
                                target_branch VARCHAR(255),
                                html_url TEXT,
                                labels TEXT,
+                               repo_id BIGINT,
                                is_deleted BOOLEAN DEFAULT FALSE
 );

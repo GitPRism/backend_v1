@@ -50,4 +50,12 @@ public class GitHubUserService {
         .deleted(user.getDeleted())
         .build();
   }
+
+  public GitHubUserResponseDto findByGithubId(String githubId) {
+    GitHubUser user = repository.findByGithubId(githubId)
+            .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없거나 삭제된 사용자입니다. GitHub ID: " + githubId));
+    return toDto(user);
+  }
+
 }
