@@ -45,6 +45,8 @@ dependencies {
 	implementation 'org.json:json:20230227'
 	implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
+	implementation 'com.fasterxml.jackson.core:jackson-databind'
+	implementation 'org.springframework.boot:spring-boot-starter-web'
 }
 
 tasks.named('test') {
