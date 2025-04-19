@@ -42,4 +42,13 @@ public class NotificationController {
     return ResponseEntity.ok(result);
   }
 
+  @PatchMapping("/read-all")
+  public ResponseEntity<Map<String, Object>> markAllAsRead(Authentication authentication) {
+    String githubId = authentication.getName();
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Map<String, Object> result = notificationService.markAllAsRead(user);
+    return ResponseEntity.ok(result);
+  }
 }

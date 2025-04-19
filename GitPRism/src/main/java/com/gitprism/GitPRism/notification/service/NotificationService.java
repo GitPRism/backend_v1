@@ -103,4 +103,19 @@ public class NotificationService {
         "notificationId", notification.getId()
     );
   }
+
+  @Transactional
+  public Map<String, Object> markAllAsRead(GitHubUser user) {
+    List<Notification> unreadNotifications = notificationRepository
+        .findAllByUserAndIsReadFalseAndIsDeletedFalse(user);
+
+    unreadNotifications.forEach(Notification::markAsRead);
+
+    return Map.of(
+        "message", "모든 알림이 읽음 처리되었습니다.",
+        "code", 200,
+        "count", unreadNotifications.size()
+    );
+  }
+
 }
