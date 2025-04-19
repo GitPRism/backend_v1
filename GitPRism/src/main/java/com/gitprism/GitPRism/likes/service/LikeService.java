@@ -94,4 +94,23 @@ public class LikeService {
     int count = likeRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
     return new LikeCountResponse("좋아요 수 조회 성공", 200, portfolioId, count);
   }
+
+  @Transactional(readOnly = true)
+  public Map<String, Object> getLikeStatus(Long portfolioId, String githubId) {
+    GitHubUser user = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("GitHub 사용자를 찾을 수 없습니다."));
+
+    Portfolio portfolio = portfolioRepository.findById(portfolioId)
+        .orElseThrow(() -> new NoSuchElementException("포트폴리오를 찾을 수 없습니다."));
+
+    boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
+
+    return Map.of(
+        "message", "좋아요 여부 조회 성공",
+        "code", 200,
+        "portfolioId", portfolioId,
+        "liked", liked
+    );
+  }
+
 }
