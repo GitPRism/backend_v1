@@ -58,4 +58,10 @@ public class GitHubUserService {
     return toDto(user);
   }
 
+  public GitHubUser findEntityById(Long id) {
+    return repository.findById(id)
+            .filter(u -> !Boolean.TRUE.equals(u.getDeleted()))
+            .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없거나 삭제된 사용자입니다. ID: " + id));
+  }
+
 }
