@@ -23,6 +23,7 @@ public class Portfolio {
   private GitHubUser user;
 
   private String title;
+  @Column(columnDefinition = "TEXT")
   private String description;
 
   @Enumerated(EnumType.STRING)
