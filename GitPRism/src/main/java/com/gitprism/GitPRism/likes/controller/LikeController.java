@@ -53,4 +53,16 @@ public class LikeController {
     LikeCountResponse response = likeService.getLikeCount(portfolioId);
     return ResponseEntity.ok(response);
   }
+
+  @GetMapping("/{portfolioId}/like")
+  @Operation(summary = "좋아요 여부 조회", description = "현재 사용자가 해당 포트폴리오에 좋아요를 눌렀는지 확인합니다.")
+  public ResponseEntity<Map<String, Object>> getLikeStatus(
+      @PathVariable Long portfolioId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    Map<String, Object> result = likeService.getLikeStatus(portfolioId, githubId);
+    return ResponseEntity.ok(result);
+  }
+
 }
