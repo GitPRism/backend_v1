@@ -8,6 +8,8 @@ import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.likes.dto.LikeCountResponse;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreEvent;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreType;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
@@ -53,6 +55,8 @@ public class LikeService {
     // 🔔 알림 전송
     eventPublisher.publishEvent(new LikeCreatedEvent(like));
 
+    // 포트폴리오 점수 이벤트 발행 (인기 정렬 반영)
+    eventPublisher.publishEvent(new PortfolioScoreEvent(portfolioId, PortfolioScoreType.LIKE));
     return Map.of(
         "message", "좋아요가 추가되었습니다.",
         "code", 201,

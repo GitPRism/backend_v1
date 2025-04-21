@@ -16,13 +16,29 @@ services:
       - db_data:/var/lib/mysql
     networks:
       - gitprism-network
-    restart: always  # 추가
+    restart: always
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 20
       start_period: 40s
+
+  redis:
+    image: redis:7
+    container_name: gitprism-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - gitprism-network
+    restart: always
+    healthcheck:
+      test: [ "CMD", "sh", "-c", "redis-cli ping | grep PONG" ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 10s
+
 
   flyway:
     image: flyway/flyway:11.4.0
@@ -48,10 +64,12 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: spring-backend
-    restart: always  # 추가
+    restart: always
     depends_on:
       flyway:
         condition: service_completed_successfully
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     ports:
@@ -59,6 +77,8 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql-db:3306/${MYSQL_DATABASE}?serverTimezone=UTC&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_FLYWAY_ENABLED: "false"
+      SPRING_REDIS_HOST: ${SPRING_REDIS_HOST}
+      SPRING_REDIS_PORT: ${SPRING_REDIS_PORT}
     networks:
       - gitprism-network
 

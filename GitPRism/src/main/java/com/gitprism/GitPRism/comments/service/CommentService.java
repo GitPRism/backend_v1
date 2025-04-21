@@ -10,6 +10,8 @@ import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.comments.dto.CommentListResponseDto;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreEvent;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreType;
 
 import lombok.RequiredArgsConstructor;
 
@@ -45,6 +47,8 @@ public class CommentService {
 
     // 📣 이벤트 발행
     eventPublisher.publishEvent(new CommentCreatedEvent(comment));
+
+    eventPublisher.publishEvent(new PortfolioScoreEvent(portfolioId, PortfolioScoreType.COMMENT));
 
     return CommentResponseDto.of(comment, user.getUsername());
   }

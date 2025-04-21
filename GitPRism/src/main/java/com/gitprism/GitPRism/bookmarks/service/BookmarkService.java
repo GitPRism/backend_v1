@@ -9,6 +9,8 @@ import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.bookmarks.event.BookmarkCreatedEvent;
 import com.gitprism.GitPRism.bookmarks.dto.BookmarkListResponse;
 import com.gitprism.GitPRism.bookmarks.dto.BookmarkStatusResponse;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreEvent;
+import com.gitprism.GitPRism.portfolios.score.PortfolioScoreType;
 
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -50,6 +52,7 @@ public class BookmarkService {
 
     eventPublisher.publishEvent(new BookmarkCreatedEvent(bookmark));
 
+    eventPublisher.publishEvent(new PortfolioScoreEvent(portfolioId, PortfolioScoreType.BOOKMARK));
     return Map.of(
         "message", "북마크가 추가되었습니다.",
         "code", 201,
