@@ -100,7 +100,7 @@ public class OpenAiService {
         
         {
           "title": "GitHub 기반 포트폴리오 생성기",
-          "description": "[기술 스택]: React, TypeScript, TailwindCSS, Zustand\\n Merge된 PR 코드 + 내용 분석 생성 기능 구현\\n 로그인 상태로 repo id 입력하여 포트폴리오 요약 데이터 반환\\n OpenAI를 활용한 PR 요약과 코드 추출\\n - GitHub에서 merge된 PR만 조회하고 저장하는 기능 구현\\n",
+          "description": "[기술 스택]: React, TypeScript, TailwindCSS, Zustand\\n Tanstack-Query를 사용한 infinite Scroll 구현\\n -서버 데이터와 에러 처리를 선언적으로 관리할 수 있는 useInfiniteQuery를 사용하여  무한 스크롤 로직 단순화\\n 좋아요 기능을 useMutation을 사용해 Optimistic Update 구현\\n‘좋아요' 기능에 Optimistic UI 업데이트를 구현하여 서버 응답을 기다리지 않고 인터페이스 반응을 즉각적으로 반영하도록 구현\\n",
           "status": "draft"
         }
 
