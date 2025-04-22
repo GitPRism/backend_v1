@@ -25,98 +25,113 @@ public class GitHubRepoService {
     private final RepoRepository repoRepository;
     private final ObjectMapper objectMapper;
 
-    private static final String GITHUB_API_URL = "https://api.github.com/user/repos";
+    private static final String REPOS_URL = "https://api.github.com/user/repos";
 
-    public String getAccessTokenByUserId(Long userId) {
-        GitHubUser user = gitHubUserRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 ID의 유저를 찾을 수 없습니다: " + userId));
+    /**
+     * ✅ GitHub ID 기반으로 참여한 레포를 조회 (contributor 기반)
+     */
+    @Transactional
+    public List<GitHubRepoResponse> getParticipatedRepositoriesByGithubId(String githubId) {
+        GitHubUser user = gitHubUserRepository.findByGithubId(githubId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 GitHub ID의 유저가 없습니다: " + githubId));
 
-        String accessToken = user.getAccessToken();
-        return user.getAccessToken();
+        return getParticipatedRepositories(user);
     }
 
-    @Transactional
-    public List<GitHubRepoResponse> getParticipatedRepositories(Long userId) {
-        GitHubUser user = gitHubUserRepository.findById(userId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 ID의 유저를 찾을 수 없습니다: " + userId));
-
+    private List<GitHubRepoResponse> getParticipatedRepositories(GitHubUser user) {
         String accessToken = user.getAccessToken();
         String username = user.getUsername();
-
         OkHttpClient client = new OkHttpClient();
-        ObjectMapper mapper = new ObjectMapper();
 
-        // 1. 유저 이벤트 호출
-        Request request = new Request.Builder()
-                .url("https://api.github.com/users/" + username + "/events")
-                .header("Authorization", "Bearer " + accessToken)
-                .build();
+        Set<Long> processedRepoIds = new HashSet<>();
+        List<Repo> savedRepos = new ArrayList<>();
 
-        try (Response response = client.newCall(request).execute()) {
-            if (!response.isSuccessful()) {
-                log.error("GitHub 이벤트 조회 실패: {}", response);
-                throw new IOException("GitHub 이벤트 조회 실패: " + response);
-            }
+        int page = 1;
+        while (true) {
+            String pagedUrl = REPOS_URL + "?affiliation=owner,collaborator,organization_member&per_page=100&page=" + page;
 
-            JsonNode events = mapper.readTree(response.body().string());
-            Set<Long> processedRepoIds = new HashSet<>();
+            Request request = new Request.Builder()
+                    .url(pagedUrl)
+                    .header("Authorization", "Bearer " + accessToken)
+                    .build();
 
-            List<Repo> savedRepos = new ArrayList<>();
-            for (JsonNode event : events) {
-                String type = event.get("type").asText();
-                if (!type.equals("PullRequestEvent") && !type.equals("IssuesEvent")) continue;
-
-                String fullRepoName = event.get("repo").get("name").asText();
-
-
-                // 2. 해당 레포 정보 호출
-                Request repoRequest = new Request.Builder()
-                        .url("https://api.github.com/repos/" + fullRepoName)
-                        .header("Authorization", "Bearer " + accessToken)
-                        .build();
-
-                try (Response repoResponse = client.newCall(repoRequest).execute()) {
-                    if (!repoResponse.isSuccessful()) {
-                        log.warn("레포 정보 조회 실패: {}", fullRepoName);
-                        continue;
-                    }
-
-                    JsonNode repoData = mapper.readTree(repoResponse.body().string());
-
-                    Long githubRepoId = repoData.get("id").asLong();
-                    if (processedRepoIds.contains(githubRepoId)) {
-                        continue;
-                    }
-                    processedRepoIds.add(githubRepoId);
-                    String name = repoData.get("name").asText();
-                    String githubId = repoData.get("id").asText();
-                    String description = repoData.hasNonNull("description") ? repoData.get("description").asText() : null;
-                    String url = repoData.get("html_url").asText();
-                    String visibility = repoData.get("private").asBoolean() ? "private" : "public";
-                    String defaultBranch = repoData.get("default_branch").asText();
-                    String language = repoData.hasNonNull("language") ? repoData.get("language").asText() : null;
-
-
-                    Optional<Repo> existingRepo = repoRepository.findByGithubRepoId(githubRepoId);
-                    Repo repo = existingRepo.orElse(Repo.builder().githubRepoId(githubRepoId).build());
-
-                    repo.setRepoName(name);
-                    repo.setGitId(user.getUsername());        // ✅ git_id ← 유저네임 (예: john123)
-                    repo.setGithubId(user.getGithubId());
-                    repo.setDescription(description);
-                    repo.setUrl(url);
-                    repo.setVisibility(visibility);
-                    repo.setDefaultBranch(defaultBranch);
-                    repo.setLanguage(language);
-
-                    savedRepos.add(repoRepository.save(repo));
+            try (Response response = client.newCall(request).execute()) {
+                if (!response.isSuccessful()) {
+                    log.warn("레포 목록 조회 실패 (page {}): {}", page, response);
+                    break;
                 }
+
+                String responseBody = response.body().string();
+                JsonNode repoArray = objectMapper.readTree(responseBody);
+                if (!repoArray.isArray() || repoArray.isEmpty()) break;
+
+                for (JsonNode repoData : repoArray) {
+                    Long githubRepoId = repoData.get("id").asLong();
+                    if (processedRepoIds.contains(githubRepoId)) continue;
+
+                    String repoName = repoData.get("name").asText();
+                    String owner = repoData.get("owner").get("login").asText();
+                    String contributorsUrl = "https://api.github.com/repos/" + owner + "/" + repoName + "/contributors";
+
+                    Request contribRequest = new Request.Builder()
+                            .url(contributorsUrl)
+                            .header("Authorization", "Bearer " + accessToken)
+                            .build();
+
+                    try (Response contribResponse = client.newCall(contribRequest).execute()) {
+                        if (!contribResponse.isSuccessful()) continue;
+
+                        JsonNode contributors = objectMapper.readTree(contribResponse.body().string());
+                        if (!contributors.isArray()) continue;
+
+                        boolean isContributor = false;
+                        for (JsonNode contributor : contributors) {
+                            String contributorLogin = contributor.get("login").asText();
+                            if (contributorLogin.equals(username)) {
+                                isContributor = true;
+                                break;
+                            }
+                        }
+
+                        if (isContributor) {
+                            processedRepoIds.add(githubRepoId);
+                            savedRepos.add(parseAndSaveRepo(repoData, user));
+                        }
+                    } catch (IOException e) {
+                        log.warn("contributors 조회 실패 for {}/{}: {}", owner, repoName, e.getMessage());
+                    }
+                }
+
+                page++;
+            } catch (IOException e) {
+                throw new RuntimeException("레포 조회 실패 (page " + page + ")", e);
             }
-
-            return GitHubRepoResponse.fromEntities(savedRepos);
-
-        } catch (IOException e) {
-            throw new RuntimeException("참여 레포 조회 실패", e);
         }
+
+        return GitHubRepoResponse.fromEntities(savedRepos);
+    }
+
+    private Repo parseAndSaveRepo(JsonNode repoData, GitHubUser user) {
+        Long githubRepoId = repoData.get("id").asLong();
+        String name = repoData.get("name").asText();
+        String description = repoData.hasNonNull("description") ? repoData.get("description").asText() : null;
+        String url = repoData.get("html_url").asText();
+        String visibility = repoData.get("private").asBoolean() ? "private" : "public";
+        String defaultBranch = repoData.get("default_branch").asText();
+        String language = repoData.hasNonNull("language") ? repoData.get("language").asText() : null;
+
+        Optional<Repo> existingRepo = repoRepository.findByGithubRepoId(githubRepoId);
+        Repo repo = existingRepo.orElse(Repo.builder().githubRepoId(githubRepoId).build());
+
+        repo.setRepoName(name);
+        repo.setGitId(user.getUsername());
+        repo.setGithubId(user.getGithubId());
+        repo.setDescription(description);
+        repo.setUrl(url);
+        repo.setVisibility(visibility);
+        repo.setDefaultBranch(defaultBranch);
+        repo.setLanguage(language);
+
+        return repoRepository.save(repo);
     }
 }

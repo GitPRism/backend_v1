@@ -7,12 +7,14 @@ import com.gitprism.GitPRism.gitpullrequests.entity.PullRequest;
 import com.gitprism.GitPRism.gitpullrequests.repository.PullRequestRepository;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
+import com.gitprism.GitPRism.gitrepositorys.dto.response.GitHubRepoResponse;
 import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import com.gitprism.GitPRism.gitrepositorys.repository.RepoRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -30,12 +32,18 @@ public class GitHubPrService {
     private final GitHubUserRepository gitHubUserRepository;
     private final RepoRepository repoRepository;
 
-    public GitHubPrResponseWrapper getPullRequests(Long userId) {
-        GitHubUser user = gitHubUserRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("해당 유저가 존재하지 않습니다."));
+    @Transactional
+    public GitHubPrResponseWrapper getParticipatedRepositoriesByGithubId(String githubId) {
+        GitHubUser user = gitHubUserRepository.findByGithubId(githubId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 GitHub ID의 유저가 없습니다: " + githubId));
 
+        return getPullRequests(user);
+    }
+
+    public GitHubPrResponseWrapper getPullRequests(GitHubUser user) {
         String accessToken = user.getAccessToken();
         String gitId = user.getGithubId();
+        Long userId = user.getId();
 
         List<Repo> repos = repoRepository.findByGithubId(gitId);
         log.info("조회된 레포 수: {}, githubId: {}", repos.size(), gitId);
