@@ -1,4 +1,4 @@
-CREATE TABLE repos (
+CREATE TABLE repo (
                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
                       git_id VARCHAR(255),
                       repo_name VARCHAR(255),
