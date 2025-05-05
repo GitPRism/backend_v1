@@ -2,7 +2,6 @@ package com.gitprism.GitPRism.portfolios.service;
 
 import com.gitprism.GitPRism.github_users.dto.response.GitHubUserResponseDto;
 import com.gitprism.GitPRism.github_users.service.GitHubUserService;
-import com.gitprism.GitPRism.gitpullrequests.repository.PullRequestRepository;
 import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import com.gitprism.GitPRism.gitrepositorys.repository.RepoRepository;
 import com.gitprism.GitPRism.portfolios.dto.response.PortfolioResponse;
@@ -16,6 +15,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -25,7 +25,6 @@ public class PortfolioService {
     private final PortfolioRepository portfolioRepository;
     private final GitHubUserService gitHubUserService;
     private final RepoRepository repoRepository;
-    private final PullRequestRepository pullRequestRepository;
     private final GitHubApiService gitHubApiService;
     private final OpenAiService openAiService;
 
@@ -109,5 +108,23 @@ public class PortfolioService {
                 .id(portfolio.getId())
                 .data(gptResult)
                 .build();
+    }
+
+    public List<PortfolioResponse> getPortfoliosByUser(Long userId) {
+        com.gitprism.GitPRism.github_users.entity.GitHubUser user = gitHubUserService.findEntityById(userId);
+        List<Portfolio> portfolioList = portfolioRepository.findByUserAndIsDeletedFalse(user);
+
+        return portfolioList.stream()
+                .map(portfolio -> PortfolioResponse.builder()
+                        .id(portfolio.getId())
+                        .message("조회 성공")
+                        .code(200)
+                        .data(Map.of(
+                                "title", portfolio.getTitle(),
+                                "description", portfolio.getDescription(),
+                                "status", portfolio.getStatus().name()
+                        ))
+                        .build()
+                ).toList();
     }
 }
