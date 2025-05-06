@@ -12,6 +12,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/portfolios")
 @RequiredArgsConstructor
@@ -52,5 +54,14 @@ public class PortfolioController {
 
         PrSummaryResponse response = prSummaryService.summarizeRepository(userId, repoId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    @Operation(summary = "내 포트폴리오 목록 조회", description = "로그인한 사용자의 포트폴리오를 조회합니다.")
+    public ResponseEntity<List<PortfolioResponse>> getMyPortfolios(Authentication authentication) {
+        String githubId = authentication.getName();
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        List<PortfolioResponse> portfolios = portfolioService.getPortfoliosByUser(user.getId());
+        return ResponseEntity.ok(portfolios);
     }
 }
