@@ -9,4 +9,5 @@ import java.util.List;
 public interface CommentRepository extends JpaRepository<Comment, Long> {
   int countByPortfolioAndIsDeletedFalse(Portfolio portfolio);
   List<Comment> findByPortfolioAndIsDeletedFalseOrderByCreatedAtDesc(Portfolio portfolio);
+  int countByPortfolioIdAndIsDeletedFalse(Long portfolioId);
 }
