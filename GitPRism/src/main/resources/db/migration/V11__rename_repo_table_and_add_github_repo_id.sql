@@ -1,4 +1,3 @@
-RENAME TABLE repo TO repos;
 -- ✅ github_repo_id 컬럼 추가 (조건부)
 SET @col := (
   SELECT COUNT(*)

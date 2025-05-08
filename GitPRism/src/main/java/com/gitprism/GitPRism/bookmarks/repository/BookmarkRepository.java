@@ -13,5 +13,4 @@ public interface BookmarkRepository extends JpaRepository<Bookmark, Long> {
   Optional<Bookmark> findByUserAndPortfolio(GitHubUser user, Portfolio portfolio);
   Optional<Bookmark> findByUserAndPortfolioAndIsDeletedFalse(GitHubUser user, Portfolio portfolio);
   List<Bookmark> findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(GitHubUser user);
-  int countByPortfolioIdAndIsDeletedFalse(Long portfolioId);
 }

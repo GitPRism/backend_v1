@@ -13,5 +13,5 @@ public class PortfolioResponse {
     private String message;
     private int code;
     private Long id;
-    private PortfolioDetailDto data;
+    private Map<String, String> data;
 }
