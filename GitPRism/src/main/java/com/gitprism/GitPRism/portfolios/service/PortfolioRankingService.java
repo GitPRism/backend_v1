@@ -51,7 +51,6 @@ public class PortfolioRankingService {
         })
         .collect(Collectors.toList());
 
-
     return new PopularPortfolioResponse("인기 포트폴리오 조회 성공", 200, result.size(), result);
   }
 }
