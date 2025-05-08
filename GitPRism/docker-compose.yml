@@ -13,7 +13,7 @@ services:
       - "3306:3306"
     volumes:
       - db_data:/var/lib/mysql
-      - ./GitPRism/mysql/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
+      - ./mysql/conf.d/my.cnf:/etc/mysql/conf.d/my.cnf
     networks:
       - gitprism-network
     restart: always
@@ -32,6 +32,10 @@ services:
     networks:
       - gitprism-network
     restart: always
+    volumes:
+      - redis_data:/data
+      - ./GitPRism/redis/redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     healthcheck:
       test: [ "CMD", "sh", "-c", "redis-cli ping | grep PONG" ]
       interval: 5s
@@ -84,6 +88,7 @@ services:
 
 volumes:
   db_data:
+  redis_data:
 
 networks:
   gitprism-network:
