@@ -158,6 +158,8 @@ public class PortfolioService {
         int contentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId); // 댓글 수
 
         return PortfolioDetailResponse.builder()
+                .portfolioId(portfolio.getId())
+                .username(portfolio.getUser().getUsername())
                 .title(portfolio.getTitle())
                 .description(portfolio.getDescription())
                 .updatedAt(portfolio.getUpdatedAt())
@@ -224,7 +226,7 @@ public class PortfolioService {
                             .title(p.getTitle())
                             .username(p.getUser().getUsername())
                             .status(p.getStatus().name().toLowerCase())
-                            .created_at(p.getCreatedAt())
+                            .updated_at(p.getUpdatedAt())
                             .likeCount(likeCount)
                             .bookmarkCount(bookmarkCount)
                             .commentCount(commentCount)

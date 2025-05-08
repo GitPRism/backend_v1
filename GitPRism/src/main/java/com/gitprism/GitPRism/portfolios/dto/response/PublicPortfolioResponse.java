@@ -14,7 +14,7 @@ public class PublicPortfolioResponse {
     private String title;
     private String username;
     private String status;
-    private LocalDateTime created_at;
+    private LocalDateTime updated_at;
     private int likeCount;
     private int bookmarkCount;
     private int commentCount;
