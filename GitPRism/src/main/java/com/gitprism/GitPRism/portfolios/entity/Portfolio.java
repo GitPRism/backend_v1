@@ -1,5 +1,6 @@
 package com.gitprism.GitPRism.portfolios.entity;
 
+import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import jakarta.persistence.*;
 import lombok.*;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
@@ -39,4 +40,7 @@ public class Portfolio {
   public enum Status {
     DRAFT, PUBLISHED
   }
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "repo_id")
+  private Repo repo;
 }

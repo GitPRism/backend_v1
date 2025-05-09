@@ -4,11 +4,11 @@ import lombok.*;
 
 import java.time.LocalDateTime;
 
-@Builder
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 public class PortfolioDetailResponse {
     private Long portfolioId;
     private String username;
