@@ -45,11 +45,9 @@ public class PortfolioController {
     ) {
         String githubId = authentication.getName();
         GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
-        List<PortfolioDetailDto> created = portfolioService.createBatch(user.getId(), request.getRepoIds());
 
-        return ResponseEntity.status(201).body(
-                new PortfolioBatchResponse("포트폴리오 %d개 생성 완료".formatted(created.size()), 201, created.size(), created)
-        );
+        PortfolioBatchResponse response = portfolioService.createBatch(user.getId(), request.getRepoIds());
+        return ResponseEntity.status(response.getCode()).body(response);
     }
 
     @GetMapping("/me")
@@ -73,15 +71,19 @@ public class PortfolioController {
             Authentication authentication
     ) {
         String githubId = authentication.getName();
-        gitHubUserService.findByGithubId(githubId); // 인증 확인용 호출
-        PortfolioDetailResponse response = portfolioService.getPortfolioDetail(portfolioId);
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        PortfolioDetailResponse response = portfolioService.getPortfolioDetail(portfolioId, user.getId());
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "전체 공개 포트폴리오 목록 조회", description = "PUBLISHED 상태의 포트폴리오 전체를 반환합니다.")
     @GetMapping("/public")
-    public ResponseEntity<Map<String, List<PortfolioDetailDto>>> getAllPublicPortfolios() {
-        List<PortfolioDetailDto> data = portfolioService.getAllPublicPortfolios();
+    public ResponseEntity<Map<String, List<PortfolioDetailDto>>> getAllPublicPortfolios(
+            Authentication authentication
+    ) {
+        String githubId = authentication.getName();
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        List<PortfolioDetailDto> data = portfolioService.getAllPublicPortfolios(user.getId());
         return ResponseEntity.ok(Map.of("data", data));
     }
 

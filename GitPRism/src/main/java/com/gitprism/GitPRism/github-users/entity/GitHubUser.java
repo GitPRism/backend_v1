@@ -27,6 +27,9 @@ public class GitHubUser {
   private String email;
 
   @Column(length = 1000)
+  private String avatarUrl;
+
+  @Column(length = 1000)
   private String accessToken;
 
   @CreatedDate

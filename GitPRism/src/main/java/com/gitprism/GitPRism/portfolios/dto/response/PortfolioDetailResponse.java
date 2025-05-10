@@ -18,4 +18,5 @@ public class PortfolioDetailResponse {
     private int likeCount;
     private int bookmarkCount;
     private int contentCount;
+    private boolean bookmarked;
 }

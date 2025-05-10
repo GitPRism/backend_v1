@@ -10,6 +10,7 @@ import java.util.List;
 @NoArgsConstructor
 public class PortfolioBatchResponse {
     private String message;
+    private Long combinedPortfolioId;
     private int code;
     private int count;
     private List<PortfolioDetailDto> data;
