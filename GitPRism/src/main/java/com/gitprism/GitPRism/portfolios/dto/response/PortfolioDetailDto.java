@@ -10,10 +10,14 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 public class PortfolioDetailDto {
+    private Long portfolioId;
     private String repoName;
     private String repoUrl;
     private String title;
     private String description;
     private String status;
     private LocalDateTime createdAt;
+    private boolean bookmarked;
+    private String avatarUrl;
+    private String username;
 }

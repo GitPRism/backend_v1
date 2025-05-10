@@ -11,4 +11,5 @@ public class LoginResponseDto {
   private String githubId;
   private String username;
   private String email;
+  private String avatarUrl;
 }

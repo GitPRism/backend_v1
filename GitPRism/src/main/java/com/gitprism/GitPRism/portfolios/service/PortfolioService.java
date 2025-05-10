@@ -12,7 +12,6 @@ import com.gitprism.GitPRism.portfolios.dto.response.*;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio.Status;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -58,7 +57,7 @@ public class PortfolioService {
                     PR 내용: %s
                     요약: %s
                     중요 코드 및 기술: %s
-
+                    
                     """.formatted(
                     s.getPrTitle(),
                     s.getPrBody(),
@@ -104,7 +103,7 @@ public class PortfolioService {
                 .build();
     }
 
-    public List<PortfolioDetailDto> createBatch(Long userId, List<Long> repoIds) {
+    public PortfolioBatchResponse createBatch(Long userId, List<Long> repoIds) {
         List<PortfolioDetailDto> results = new ArrayList<>();
 
         for (Long repoId : repoIds) {
@@ -116,14 +115,19 @@ public class PortfolioService {
             }
         }
 
-        // 자동으로 묶음 포트폴리오 저장
-        createCombinedPortfolio(userId, repoIds);
+        Portfolio combined = createCombinedPortfolio(userId, repoIds);
 
-        return results;
+        return new PortfolioBatchResponse(
+                "포트폴리오 %d개 생성 완료".formatted(results.size()),
+                combined.getId(),
+                201,
+                results.size(),
+                results
+        );
     }
 
 
-    public PortfolioDetailResponse getPortfolioDetail(Long portfolioId) {
+    public PortfolioDetailResponse getPortfolioDetail(Long portfolioId, Long userId) {
         Portfolio portfolio = portfolioRepository.findByIdAndIsDeletedFalse(portfolioId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 포트폴리오가 존재하지 않습니다."));
 
@@ -131,9 +135,11 @@ public class PortfolioService {
             throw new IllegalStateException("해당 포트폴리오는 아직 공개되지 않았습니다.");
         }
 
+        GitHubUser user = gitHubUserService.findEntityById(userId);
         int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int contentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
+        boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
 
         return PortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId())
@@ -144,6 +150,7 @@ public class PortfolioService {
                 .likeCount(likeCount)
                 .bookmarkCount(bookmarkCount)
                 .contentCount(contentCount)
+                .bookmarked(bookmarked)
                 .build();
     }
 
@@ -153,6 +160,7 @@ public class PortfolioService {
 
         return portfolios.stream()
                 .map(p -> PortfolioDetailDto.builder()
+                        .portfolioId(p.getId())
                         .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
                         .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
                         .title(p.getTitle())
@@ -163,18 +171,25 @@ public class PortfolioService {
                 .toList();
     }
 
-    public List<PortfolioDetailDto> getAllPublicPortfolios() {
+    public List<PortfolioDetailDto> getAllPublicPortfolios(Long userId) {
+        GitHubUser user = gitHubUserService.findEntityById(userId);
         List<Portfolio> published = portfolioRepository.findByStatusAndIsDeletedFalse(Status.PUBLISHED);
 
+
         return published.stream()
-                .map(p -> PortfolioDetailDto.builder()
-                        .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
-                        .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
-                        .title(p.getTitle())
-                        .description(p.getDescription())
-                        .status(p.getStatus().name().toLowerCase())
-                        .createdAt(p.getCreatedAt())
-                        .build())
+                .map(p -> {
+                    boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
+                    return PortfolioDetailDto.builder()
+                            .portfolioId(p.getId())
+                            .username(p.getUser().getUsername())
+                            .avatarUrl(p.getUser().getAvatarUrl())
+                            .title(p.getTitle())
+                            .description(p.getDescription())
+                            .status(p.getStatus().name().toLowerCase())
+                            .createdAt(p.getCreatedAt())
+                            .bookmarked(bookmarked)
+                            .build();
+                })
                 .toList();
     }
 
@@ -193,11 +208,14 @@ public class PortfolioService {
         portfolio.setStatus(newStatus);
         portfolio.setUpdatedAt(LocalDateTime.now());
 
+        portfolioRepository.save(portfolio);
+
         String message = (newStatus == Portfolio.Status.PUBLISHED)
                 ? "포트폴리오가 성공적으로 게시되었습니다."
                 : "포트폴리오가 임시 저장되었습니다.";
 
         PortfolioDetailDto detail = PortfolioDetailDto.builder()
+                .portfolioId(portfolio.getId())
                 .repoName(portfolio.getRepo() != null ? portfolio.getRepo().getRepoName() : null)
                 .repoUrl(portfolio.getRepo() != null ? portfolio.getRepo().getUrl() : null)
                 .title(portfolio.getTitle())
@@ -219,31 +237,19 @@ public class PortfolioService {
         StringBuilder fullDescription = new StringBuilder();
 
         for (Long repoId : repoIds) {
-            Repo repo = repoRepository.findById(repoId)
-                    .orElseThrow(() -> new IllegalArgumentException("레포를 찾을 수 없습니다."));
-            String accessToken = gitHubUserService.findById(userId).getAccessToken();
-            var prs = gitHubApiService.getUserPrsFromRepo(repo, accessToken);
+            try {
+                PortfolioResponse pr = createPortfolio(userId, repoId);
+                String title = pr.getData().getTitle();
+                String description = pr.getData().getDescription();
 
-            for (var pr : prs) {
-                String diff = gitHubApiService.getPrDiff(repo, pr.getNumber(), accessToken);
-                var summary = openAiService.summarizePr(pr.getTitle(), pr.getBody(), diff);
-
-                // 정제 처리
-                String cleanSummary = summary.getSummary().replace("\n", "\\n").trim();
-                String cleanCode = summary.getImportantCode().replace("\n", "\\n").trim();
-
+                // 형식: ▸ 제목 \n 설명 \n\n
                 fullDescription.append("""
-                    ▸ Repository: %s
-                    PR 제목: %s
-                    요약: %s
-                    주요 코드: %s
-
-                    """.formatted(
-                        repo.getRepoName(),
-                        pr.getTitle(),
-                        cleanSummary,
-                        cleanCode
-                ));
+                        ▸ %s
+                        %s
+                        
+                        """.formatted(title, description));
+            } catch (Exception e) {
+                log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
             }
         }
 
@@ -260,3 +266,4 @@ public class PortfolioService {
         return portfolioRepository.save(combined);
     }
 }
+
