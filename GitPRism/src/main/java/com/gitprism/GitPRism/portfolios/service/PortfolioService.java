@@ -80,6 +80,7 @@ public class PortfolioService {
                 .title(gptResult.get("title"))
                 .description(gptResult.get("description"))
                 .status(Status.valueOf(gptResult.get("status").toUpperCase()))
+                .repoOrgAvatarUrl(repo.getOrgAvatarUrl())
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -87,12 +88,20 @@ public class PortfolioService {
         portfolioRepository.save(portfolio);
 
         PortfolioDetailDto detail = PortfolioDetailDto.builder()
+                .portfolioId(portfolio.getId())
                 .repoName(repo.getRepoName())
                 .repoUrl(repo.getUrl())
+                .username(user.getUsername())
+                .avatarUrl(user.getAvatarUrl())
+                .repoOrgAvatarUrl(repo.getOrgAvatarUrl())
                 .title(portfolio.getTitle())
                 .description(portfolio.getDescription())
                 .status(portfolio.getStatus().name().toLowerCase())
                 .createdAt(portfolio.getCreatedAt())
+                .bookmarked(false)
+                .liked(false)
+                .likeCount(0)
+                .bookmarkCount(0)
                 .build();
 
         return PortfolioResponse.builder()
@@ -105,27 +114,26 @@ public class PortfolioService {
 
     public PortfolioBatchResponse createBatch(Long userId, List<Long> repoIds) {
         List<PortfolioDetailDto> results = new ArrayList<>();
-        List<String> failures = new ArrayList<>();
 
         for (Long repoId : repoIds) {
             try {
                 PortfolioResponse created = createPortfolio(userId, repoId);
                 results.add(created.getData());
             } catch (Exception e) {
-                log.error("❌ 레포 ID {} 처리 중 오류 발생: {}", repoId, e.getMessage(), e);
-                failures.add("repoId: " + repoId);
+                log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
             }
         }
 
+        String representativeImageUrl = results.isEmpty() ? null : results.get(0).getAvatarUrl();
         Portfolio combined = createCombinedPortfolio(userId, results);
 
         return new PortfolioBatchResponse(
-                "포트폴리오 %d개 생성, %d개 실패".formatted(results.size(), failures.size()),
+                "포트폴리오 %d개 생성 완료".formatted(results.size()),
                 combined.getId(),
+                representativeImageUrl,
                 201,
                 results.size(),
-                results,
-                failures
+                results
         );
     }
 
@@ -143,11 +151,11 @@ public class PortfolioService {
         int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int contentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
-        boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
 
         return PortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId())
                 .username(portfolio.getUser().getUsername())
+                .avatarUrl(portfolio.getUser().getAvatarUrl())
                 .title(portfolio.getTitle())
                 .description(portfolio.getDescription())
                 .updatedAt(portfolio.getUpdatedAt())
@@ -155,7 +163,6 @@ public class PortfolioService {
                 .bookmarkCount(bookmarkCount)
                 .contentCount(contentCount)
                 .bookmarked(bookmarked)
-                .liked(liked)
                 .build();
     }
 
@@ -168,6 +175,13 @@ public class PortfolioService {
                         .portfolioId(p.getId())
                         .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
                         .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
+                        .username(p.getUser().getUsername())
+                        .avatarUrl(p.getUser().getAvatarUrl())
+                        .repoOrgAvatarUrl(
+                                p.getRepo() != null && p.getRepo().getOrgAvatarUrl() != null
+                                        ? p.getRepo().getOrgAvatarUrl()
+                                        : p.getRepoOrgAvatarUrl()
+                        )
                         .title(p.getTitle())
                         .description(p.getDescription())
                         .status(p.getStatus().name().toLowerCase())
@@ -184,13 +198,18 @@ public class PortfolioService {
         return published.stream()
                 .map(p -> {
                     boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
-                    boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
                     int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
                     int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
                     return PortfolioDetailDto.builder()
                             .portfolioId(p.getId())
                             .username(p.getUser().getUsername())
                             .avatarUrl(p.getUser().getAvatarUrl())
+                            .repoOrgAvatarUrl(
+                                    p.getRepo() != null && p.getRepo().getOrgAvatarUrl() != null
+                                            ? p.getRepo().getOrgAvatarUrl()
+                                            : p.getRepoOrgAvatarUrl()
+                            )
                             .title(p.getTitle())
                             .description(p.getDescription())
                             .status(p.getStatus().name().toLowerCase())
@@ -243,11 +262,17 @@ public class PortfolioService {
                 .build();
     }
 
-    public Portfolio createCombinedPortfolio(Long userId, List<PortfolioDetailDto> singleResults) {
+    public Portfolio createCombinedPortfolio(Long userId, List<PortfolioDetailDto> detailList) {
         GitHubUser user = gitHubUserService.findEntityById(userId);
         StringBuilder fullDescription = new StringBuilder();
 
-        for (PortfolioDetailDto dto : singleResults) {
+        String firstAvatarUrl = null;
+        for (int i = 0; i < detailList.size(); i++) {
+            PortfolioDetailDto dto = detailList.get(i);
+            if (i == 0) {
+                firstAvatarUrl = dto.getAvatarUrl(); // ✅ 첫 번째만 저장
+            }
+
             fullDescription.append("""
                 ▸ %s
                 %s
@@ -257,8 +282,9 @@ public class PortfolioService {
 
         Portfolio combined = Portfolio.builder()
                 .user(user)
-                .title("요약 포트폴리오 (%d개 레포)".formatted(singleResults.size()))
+                .title("요약 포트폴리오 (%d개 레포)".formatted(detailList.size()))
                 .description(fullDescription.toString())
+                .repoOrgAvatarUrl(firstAvatarUrl)
                 .status(Status.DRAFT)
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())

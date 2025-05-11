@@ -61,4 +61,7 @@ public class Repo {
     @Column(name = "github_repo_id", unique = true)
     private Long githubRepoId;
 
+    @Column(name = "org_avatar_url", columnDefinition = "TEXT")
+    private String orgAvatarUrl;
+
 }

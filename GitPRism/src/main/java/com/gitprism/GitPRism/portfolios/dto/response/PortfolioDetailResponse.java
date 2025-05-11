@@ -12,12 +12,14 @@ import java.time.LocalDateTime;
 public class PortfolioDetailResponse {
     private Long portfolioId;
     private String username;
+    private String avatarUrl;
+    private String repoOrgAvatarUrl;
     private String title;
     private String description;
     private LocalDateTime updatedAt;
     private int likeCount;
-    private boolean liked;
     private int bookmarkCount;
-    private boolean bookmarked;
     private int contentCount;
+    private boolean bookmarked;
+    private boolean liked;
 }
