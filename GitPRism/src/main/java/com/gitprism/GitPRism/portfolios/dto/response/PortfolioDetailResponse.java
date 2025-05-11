@@ -12,7 +12,6 @@ import java.time.LocalDateTime;
 public class PortfolioDetailResponse {
     private Long portfolioId;
     private String username;
-    private String avatarUrl;
     private String title;
     private String description;
     private LocalDateTime updatedAt;
