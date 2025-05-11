@@ -80,6 +80,7 @@ public class PortfolioService {
                 .title(gptResult.get("title"))
                 .description(gptResult.get("description"))
                 .status(Status.valueOf(gptResult.get("status").toUpperCase()))
+                .repoOrgAvatarUrl(repo.getOrgAvatarUrl())
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -89,6 +90,8 @@ public class PortfolioService {
         PortfolioDetailDto detail = PortfolioDetailDto.builder()
                 .repoName(repo.getRepoName())
                 .repoUrl(repo.getUrl())
+                .avatarUrl(repo.getOrgAvatarUrl())
+                .username(user.getUsername())
                 .title(portfolio.getTitle())
                 .description(portfolio.getDescription())
                 .status(portfolio.getStatus().name().toLowerCase())
@@ -115,11 +118,13 @@ public class PortfolioService {
             }
         }
 
-        Portfolio combined = createCombinedPortfolio(userId, repoIds);
+        String representativeImageUrl = results.isEmpty() ? null : results.get(0).getAvatarUrl();
+        Portfolio combined = createCombinedPortfolio(userId, results);
 
         return new PortfolioBatchResponse(
                 "포트폴리오 %d개 생성 완료".formatted(results.size()),
                 combined.getId(),
+                representativeImageUrl,
                 201,
                 results.size(),
                 results
@@ -144,6 +149,7 @@ public class PortfolioService {
         return PortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId())
                 .username(portfolio.getUser().getUsername())
+                .avatarUrl(portfolio.getUser().getAvatarUrl())
                 .title(portfolio.getTitle())
                 .description(portfolio.getDescription())
                 .updatedAt(portfolio.getUpdatedAt())
@@ -163,6 +169,12 @@ public class PortfolioService {
                         .portfolioId(p.getId())
                         .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
                         .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
+                        .username(p.getUser().getUsername())
+                        .avatarUrl(
+                                p.getRepo() != null && p.getRepo().getOrgAvatarUrl() != null
+                                        ? p.getRepo().getOrgAvatarUrl()
+                                        : p.getRepoOrgAvatarUrl()
+                        )
                         .title(p.getTitle())
                         .description(p.getDescription())
                         .status(p.getStatus().name().toLowerCase())
@@ -232,31 +244,29 @@ public class PortfolioService {
                 .build();
     }
 
-    public Portfolio createCombinedPortfolio(Long userId, List<Long> repoIds) {
+    public Portfolio createCombinedPortfolio(Long userId, List<PortfolioDetailDto> detailList) {
         GitHubUser user = gitHubUserService.findEntityById(userId);
         StringBuilder fullDescription = new StringBuilder();
 
-        for (Long repoId : repoIds) {
-            try {
-                PortfolioResponse pr = createPortfolio(userId, repoId);
-                String title = pr.getData().getTitle();
-                String description = pr.getData().getDescription();
-
-                // 형식: ▸ 제목 \n 설명 \n\n
-                fullDescription.append("""
-                        ▸ %s
-                        %s
-                        
-                        """.formatted(title, description));
-            } catch (Exception e) {
-                log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
+        String firstAvatarUrl = null;
+        for (int i = 0; i < detailList.size(); i++) {
+            PortfolioDetailDto dto = detailList.get(i);
+            if (i == 0) {
+                firstAvatarUrl = dto.getAvatarUrl(); // ✅ 첫 번째만 저장
             }
+
+            fullDescription.append("""
+                ▸ %s
+                %s
+
+                """.formatted(dto.getTitle(), dto.getDescription()));
         }
 
         Portfolio combined = Portfolio.builder()
                 .user(user)
-                .title("요약 포트폴리오 (%d개 레포)".formatted(repoIds.size()))
+                .title("요약 포트폴리오 (%d개 레포)".formatted(detailList.size()))
                 .description(fullDescription.toString())
+                .repoOrgAvatarUrl(firstAvatarUrl)
                 .status(Status.DRAFT)
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())

@@ -43,4 +43,7 @@ public class Portfolio {
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "repo_id")
   private Repo repo;
+
+  @Column(name = "repo_org_avatar_url", columnDefinition = "TEXT")
+  private String repoOrgAvatarUrl;
 }
