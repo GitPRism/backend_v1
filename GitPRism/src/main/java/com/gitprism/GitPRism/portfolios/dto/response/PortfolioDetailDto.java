@@ -11,13 +11,16 @@ import java.time.LocalDateTime;
 @Builder
 public class PortfolioDetailDto {
     private Long portfolioId;
+    private String username;
+    private String avatarUrl;
     private String repoName;
     private String repoUrl;
     private String title;
     private String description;
+    private int likeCount;
+    private boolean liked;
+    private int bookmarkCount;
+    private boolean bookmarked;
     private String status;
     private LocalDateTime createdAt;
-    private boolean bookmarked;
-    private String avatarUrl;
-    private String username;
 }

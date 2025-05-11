@@ -16,7 +16,8 @@ public class PortfolioDetailResponse {
     private String description;
     private LocalDateTime updatedAt;
     private int likeCount;
+    private boolean liked;
     private int bookmarkCount;
-    private int contentCount;
     private boolean bookmarked;
+    private int contentCount;
 }

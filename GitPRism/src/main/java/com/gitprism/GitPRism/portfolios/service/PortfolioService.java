@@ -105,24 +105,27 @@ public class PortfolioService {
 
     public PortfolioBatchResponse createBatch(Long userId, List<Long> repoIds) {
         List<PortfolioDetailDto> results = new ArrayList<>();
+        List<String> failures = new ArrayList<>();
 
         for (Long repoId : repoIds) {
             try {
                 PortfolioResponse created = createPortfolio(userId, repoId);
                 results.add(created.getData());
             } catch (Exception e) {
-                log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
+                log.error("❌ 레포 ID {} 처리 중 오류 발생: {}", repoId, e.getMessage(), e);
+                failures.add("repoId: " + repoId);
             }
         }
 
-        Portfolio combined = createCombinedPortfolio(userId, repoIds);
+        Portfolio combined = createCombinedPortfolio(userId, results);
 
         return new PortfolioBatchResponse(
-                "포트폴리오 %d개 생성 완료".formatted(results.size()),
+                "포트폴리오 %d개 생성, %d개 실패".formatted(results.size(), failures.size()),
                 combined.getId(),
                 201,
                 results.size(),
-                results
+                results,
+                failures
         );
     }
 
@@ -140,6 +143,7 @@ public class PortfolioService {
         int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int contentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
+        boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
 
         return PortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId())
@@ -151,6 +155,7 @@ public class PortfolioService {
                 .bookmarkCount(bookmarkCount)
                 .contentCount(contentCount)
                 .bookmarked(bookmarked)
+                .liked(liked)
                 .build();
     }
 
@@ -179,6 +184,9 @@ public class PortfolioService {
         return published.stream()
                 .map(p -> {
                     boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
+                    boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
+                    int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
                     return PortfolioDetailDto.builder()
                             .portfolioId(p.getId())
                             .username(p.getUser().getUsername())
@@ -188,6 +196,9 @@ public class PortfolioService {
                             .status(p.getStatus().name().toLowerCase())
                             .createdAt(p.getCreatedAt())
                             .bookmarked(bookmarked)
+                            .liked(liked)
+                            .likeCount(likeCount)
+                            .bookmarkCount(bookmarkCount)
                             .build();
                 })
                 .toList();
@@ -232,30 +243,21 @@ public class PortfolioService {
                 .build();
     }
 
-    public Portfolio createCombinedPortfolio(Long userId, List<Long> repoIds) {
+    public Portfolio createCombinedPortfolio(Long userId, List<PortfolioDetailDto> singleResults) {
         GitHubUser user = gitHubUserService.findEntityById(userId);
         StringBuilder fullDescription = new StringBuilder();
 
-        for (Long repoId : repoIds) {
-            try {
-                PortfolioResponse pr = createPortfolio(userId, repoId);
-                String title = pr.getData().getTitle();
-                String description = pr.getData().getDescription();
+        for (PortfolioDetailDto dto : singleResults) {
+            fullDescription.append("""
+                ▸ %s
+                %s
 
-                // 형식: ▸ 제목 \n 설명 \n\n
-                fullDescription.append("""
-                        ▸ %s
-                        %s
-                        
-                        """.formatted(title, description));
-            } catch (Exception e) {
-                log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
-            }
+                """.formatted(dto.getTitle(), dto.getDescription()));
         }
 
         Portfolio combined = Portfolio.builder()
                 .user(user)
-                .title("요약 포트폴리오 (%d개 레포)".formatted(repoIds.size()))
+                .title("요약 포트폴리오 (%d개 레포)".formatted(singleResults.size()))
                 .description(fullDescription.toString())
                 .status(Status.DRAFT)
                 .isDeleted(false)

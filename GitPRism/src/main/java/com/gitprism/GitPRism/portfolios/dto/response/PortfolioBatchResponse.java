@@ -14,4 +14,5 @@ public class PortfolioBatchResponse {
     private int code;
     private int count;
     private List<PortfolioDetailDto> data;
+    private List<String> failures;
 }
