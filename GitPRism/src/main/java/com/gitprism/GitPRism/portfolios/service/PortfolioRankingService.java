@@ -40,14 +40,19 @@ public class PortfolioRankingService {
         ));
 
     List<Portfolio> portfolios = portfolioRepository.findByIdIn(portfolioIds);
-
     Map<Long, Portfolio> portfolioMap = portfolios.stream()
         .collect(Collectors.toMap(Portfolio::getId, p -> p));
 
     List<PopularPortfolioDto> result = portfolioIds.stream()
         .map(id -> {
           Portfolio p = portfolioMap.get(id);
-          return new PopularPortfolioDto(p.getId(), p.getTitle(), p.getUser().getUsername(), scoreMap.get(id));
+          return new PopularPortfolioDto(
+              p.getId(),
+              p.getTitle(),
+              p.getUser().getUsername(),
+              p.getDescription(),  //description 추가
+              scoreMap.getOrDefault(id, 0.0)
+          );
         })
         .collect(Collectors.toList());
 
