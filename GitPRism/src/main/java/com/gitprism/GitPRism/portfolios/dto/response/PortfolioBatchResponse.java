@@ -11,6 +11,7 @@ import java.util.List;
 public class PortfolioBatchResponse {
     private String message;
     private Long combinedPortfolioId;
+    private String representativeImageUrl;
     private int code;
     private int count;
     private List<PortfolioDetailDto> data;
