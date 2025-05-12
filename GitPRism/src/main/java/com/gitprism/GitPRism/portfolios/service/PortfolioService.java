@@ -102,6 +102,7 @@ public class PortfolioService {
                 .liked(false)
                 .likeCount(0)
                 .bookmarkCount(0)
+                .commentCount(0)
                 .build();
 
         return PortfolioResponse.builder()

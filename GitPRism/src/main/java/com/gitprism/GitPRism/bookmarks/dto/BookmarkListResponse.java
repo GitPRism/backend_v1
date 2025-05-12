@@ -19,6 +19,14 @@ public class BookmarkListResponse {
     private Long portfolioId;
     private String title;
     private String description;
+    private String username;
+    private String avatarUrl;
+    private String repoOrgAvatarUrl;
+    private boolean bookmarked;
+    private boolean liked;
+    private int likeCount;
+    private int bookmarkCount;
+    private int commentCount;
     private LocalDateTime createdAt;
   }
 }
