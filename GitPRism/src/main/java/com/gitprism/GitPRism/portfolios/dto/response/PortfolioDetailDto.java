@@ -24,4 +24,5 @@ public class PortfolioDetailDto {
     private boolean liked;
     private int likeCount;
     private int bookmarkCount;
+    private int commentCount;
 }
