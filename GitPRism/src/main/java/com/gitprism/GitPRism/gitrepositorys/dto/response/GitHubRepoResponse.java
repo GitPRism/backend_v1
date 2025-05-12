@@ -18,6 +18,7 @@ public class GitHubRepoResponse {
     private String defaultBranch;
     private String language;
     private String visibility;
+    private String orgAvatarUrl;
 
     public static List<GitHubRepoResponse> fromEntities(List<Repo> repos) {
         return repos.stream().map(repo ->
@@ -30,6 +31,7 @@ public class GitHubRepoResponse {
                         .defaultBranch(repo.getDefaultBranch())
                         .language(repo.getLanguage())
                         .visibility(repo.getVisibility())
+                        .orgAvatarUrl(repo.getOrgAvatarUrl())
                         .build()
         ).collect(Collectors.toList());
     }

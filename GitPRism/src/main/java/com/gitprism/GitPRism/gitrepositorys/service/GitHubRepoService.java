@@ -119,6 +119,7 @@ public class GitHubRepoService {
         String visibility = repoData.get("private").asBoolean() ? "private" : "public";
         String defaultBranch = repoData.get("default_branch").asText();
         String language = repoData.hasNonNull("language") ? repoData.get("language").asText() : null;
+        String orgAvatarUrl = repoData.get("owner").get("avatar_url").asText();
 
         Optional<Repo> existingRepo = repoRepository.findByGithubRepoId(githubRepoId);
         Repo repo = existingRepo.orElse(Repo.builder().githubRepoId(githubRepoId).build());
@@ -131,6 +132,7 @@ public class GitHubRepoService {
         repo.setVisibility(visibility);
         repo.setDefaultBranch(defaultBranch);
         repo.setLanguage(language);
+        repo.setOrgAvatarUrl(orgAvatarUrl);
 
         return repoRepository.save(repo);
     }
