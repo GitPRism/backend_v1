@@ -18,4 +18,5 @@ public class GitHubUserResponseDto {
   private LocalDateTime createdAt;
   private LocalDateTime updatedAt;
   private Boolean deleted; // ✅ deleted로 정확히 명시!
+  private String avatarUrl;
 }

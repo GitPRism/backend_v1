@@ -83,6 +83,7 @@ public class OAuthService {
     String githubId = String.valueOf(userInfo.get("id"));
     String username = (String) userInfo.get("login");
     String email = (String) userInfo.get("email"); // null일 수 있음
+    String avatarUrl = (String) userInfo.get("avatar_url");
 
     // 이미 존재하면 업데이트, 없으면 생성
     GitHubUser user = userRepository.findByGithubId(githubId)
@@ -90,6 +91,7 @@ public class OAuthService {
           existing.setUsername(username);
           existing.setEmail(email);
           existing.setAccessToken(accessToken);
+          existing.setAvatarUrl(avatarUrl);
           return existing;
         })
         .orElse(GitHubUser.builder()
@@ -97,6 +99,7 @@ public class OAuthService {
             .username(username)
             .email(email)
             .accessToken(accessToken)
+            .avatarUrl(avatarUrl)
             .build());
 
     userRepository.save(user);
@@ -109,6 +112,7 @@ public class OAuthService {
         .githubId(user.getGithubId())
         .username(user.getUsername())
         .email(user.getEmail())
+        .avatarUrl(user.getAvatarUrl())
         .id(user.getId())
         .build();
   }

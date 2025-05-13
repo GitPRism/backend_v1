@@ -4,6 +4,8 @@ import com.gitprism.GitPRism.bookmarks.entity.Bookmark;
 import com.gitprism.GitPRism.bookmarks.repository.BookmarkRepository;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
+import com.gitprism.GitPRism.likes.repository.LikeRepository;
+import com.gitprism.GitPRism.comments.repository.CommentRepository;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.bookmarks.event.BookmarkCreatedEvent;
@@ -28,6 +30,8 @@ public class BookmarkService {
   private final BookmarkRepository bookmarkRepository;
   private final GitHubUserRepository userRepository;
   private final PortfolioRepository portfolioRepository;
+  private final CommentRepository commentRepository;
+  private final LikeRepository likeRepository;
   private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
@@ -94,12 +98,29 @@ public class BookmarkService {
     List<Bookmark> bookmarks = bookmarkRepository.findAllByUserAndIsDeletedFalseOrderByCreatedAtDesc(user);
 
     List<BookmarkListResponse.BookmarkSimpleDto> result = bookmarks.stream()
-        .map(b -> new BookmarkListResponse.BookmarkSimpleDto(
-            b.getPortfolio().getId(),
-            b.getPortfolio().getTitle(),
-            b.getPortfolio().getDescription(),
-            b.getCreatedAt()
-        ))
+        .map(b -> {
+          Portfolio p = b.getPortfolio();
+          int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+          int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+          int commentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+          boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
+
+
+          return new BookmarkListResponse.BookmarkSimpleDto(
+                  p.getId(),
+                  p.getTitle(),
+                  p.getDescription(),
+                  p.getUser().getUsername(),
+                  p.getUser().getAvatarUrl(),
+                  p.getRepoOrgAvatarUrl(),
+                  true,   // 북마크 리스트니까 무조건 true
+                  liked,
+                  likeCount,
+                  bookmarkCount,
+                  commentCount,
+                  b.getCreatedAt()
+          );
+        })
         .toList();
 
     return new BookmarkListResponse("북마크 목록 조회 성공", 200, result);
