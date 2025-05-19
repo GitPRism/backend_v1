@@ -8,6 +8,7 @@ import com.gitprism.GitPRism.github_users.service.GitHubUserService;
 import com.gitprism.GitPRism.gitrepositorys.entity.Repo;
 import com.gitprism.GitPRism.gitrepositorys.repository.RepoRepository;
 import com.gitprism.GitPRism.likes.repository.LikeRepository;
+import com.gitprism.GitPRism.portfolios.dto.request.PortfolioUpdateRequest;
 import com.gitprism.GitPRism.portfolios.dto.response.*;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio.Status;
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,7 +36,8 @@ public class PortfolioService {
     private final GitHubApiService gitHubApiService;
     private final OpenAiService openAiService;
 
-    public PortfolioResponse createPortfolio(Long userId, Long repoId) {
+
+    public PortfolioResponse createPortfolio(Long userId, Long repoId,  Portfolio parentPortfolio) {
         GitHubUserResponseDto userDto = gitHubUserService.findById(userId);
         String accessToken = userDto.getAccessToken();
         Repo repo = repoRepository.findById(repoId)
@@ -81,6 +84,7 @@ public class PortfolioService {
                 .description(gptResult.get("description"))
                 .status(Status.valueOf(gptResult.get("status").toUpperCase()))
                 .repoOrgAvatarUrl(repo.getOrgAvatarUrl())
+                .parent(parentPortfolio)
                 .isDeleted(false)
                 .createdAt(LocalDateTime.now())
                 .updatedAt(LocalDateTime.now())
@@ -116,17 +120,20 @@ public class PortfolioService {
     public PortfolioBatchResponse createBatch(Long userId, List<Long> repoIds) {
         List<PortfolioDetailDto> results = new ArrayList<>();
 
+        Portfolio combined = createCombinedPortfolio(userId, new ArrayList<>());
+
         for (Long repoId : repoIds) {
             try {
-                PortfolioResponse created = createPortfolio(userId, repoId);
+                PortfolioResponse created = createPortfolio(userId, repoId, combined);
                 results.add(created.getData());
             } catch (Exception e) {
                 log.warn("레포 {} 처리 중 오류 발생: {}", repoId, e.getMessage());
             }
         }
 
+        updateCombinedPortfolioFromDetails(combined, results);
+
         String representativeImageUrl = results.isEmpty() ? null : results.get(0).getAvatarUrl();
-        Portfolio combined = createCombinedPortfolio(userId, results);
 
         return new PortfolioBatchResponse(
                 "포트폴리오 %d개 생성 완료".formatted(results.size()),
@@ -135,7 +142,22 @@ public class PortfolioService {
                 201,
                 results.size(),
                 results
+
         );
+    }
+
+    private void updateCombinedPortfolioFromDetails(Portfolio combined, List<PortfolioDetailDto> details) {
+        if (details.isEmpty()) return;
+
+        String summaryTitle = "요약 포트폴리오 (%d개 레포)".formatted(details.size());
+        String summaryDescription = details.stream()
+                .map(dto -> "- " + dto.getTitle() + ": " + dto.getDescription())
+                .collect(Collectors.joining("\n\n"));
+
+        combined.setTitle(summaryTitle);
+        combined.setDescription(summaryDescription);
+        combined.setUpdatedAt(LocalDateTime.now());
+        portfolioRepository.save(combined);
     }
 
 
@@ -232,16 +254,16 @@ public class PortfolioService {
             throw new SecurityException("해당 포트폴리오를 수정할 수 없습니다.");
         }
 
-        Portfolio.Status newStatus = (portfolio.getStatus() == Portfolio.Status.DRAFT)
-                ? Portfolio.Status.PUBLISHED
-                : Portfolio.Status.DRAFT;
+        Status newStatus = (portfolio.getStatus() == Status.DRAFT)
+                ? Status.PUBLISHED
+                : Status.DRAFT;
 
         portfolio.setStatus(newStatus);
         portfolio.setUpdatedAt(LocalDateTime.now());
 
         portfolioRepository.save(portfolio);
 
-        String message = (newStatus == Portfolio.Status.PUBLISHED)
+        String message = (newStatus == Status.PUBLISHED)
                 ? "포트폴리오가 성공적으로 게시되었습니다."
                 : "포트폴리오가 임시 저장되었습니다.";
 
@@ -271,7 +293,7 @@ public class PortfolioService {
         for (int i = 0; i < detailList.size(); i++) {
             PortfolioDetailDto dto = detailList.get(i);
             if (i == 0) {
-                firstAvatarUrl = dto.getAvatarUrl(); // ✅ 첫 번째만 저장
+                firstAvatarUrl = dto.getAvatarUrl();
             }
 
             fullDescription.append("""
@@ -294,5 +316,54 @@ public class PortfolioService {
 
         return portfolioRepository.save(combined);
     }
+
+    public PortfolioResponse updateIndividualPortfolio(Long userId, Long portfolioId, PortfolioUpdateRequest request) {
+        Portfolio portfolio = portfolioRepository.findByIdAndIsDeletedFalse(portfolioId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 포트폴리오가 존재하지 않습니다."));
+
+        if (!portfolio.getUser().getId().equals(userId)) {
+            throw new SecurityException("수정 권한이 없습니다.");
+        }
+
+
+        boolean isCombinedPortfolio = (portfolio.getParent() == null);
+
+        if (request.getTitle() != null) {
+            portfolio.setTitle(request.getTitle());
+        }
+
+        if (request.getDescription() != null) {
+            if (!isCombinedPortfolio) {
+                portfolio.setDescription(request.getDescription());
+            } else {
+                log.warn("다중 포트폴리오에서는 description 수정이 제한됩니다. [portfolioId={}]", portfolioId);
+            }
+        }
+
+        portfolio.setUpdatedAt(LocalDateTime.now());
+        portfolioRepository.save(portfolio);
+
+        Portfolio parent = portfolio.getParent();
+        if (parent != null) {
+            List<Portfolio> children = portfolioRepository.findByParentId(parent.getId());
+
+            String updatedDescription = children.stream()
+                    .map(p -> "- " + p.getTitle() + ": " + p.getDescription())
+                    .collect(Collectors.joining("\n\n"));
+
+            parent.setDescription(updatedDescription);
+            parent.setUpdatedAt(LocalDateTime.now());
+            portfolioRepository.save(parent);
+        }
+
+        PortfolioDetailDto detail = PortfolioDetailDto.fromEntity(portfolio);
+        return PortfolioResponse.builder()
+                .message("개별 포트폴리오 수정 및 요약 포트폴리오 갱신 완료")
+                .code(200)
+                .id(portfolio.getId())
+                .data(detail)
+                .build();
+    }
+
 }
 
