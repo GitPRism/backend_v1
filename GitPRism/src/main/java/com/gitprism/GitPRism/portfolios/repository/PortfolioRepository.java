@@ -15,4 +15,5 @@ public interface PortfolioRepository extends JpaRepository<Portfolio, Long> {
   Optional<Portfolio> findByIdAndIsDeletedFalse(Long id);
   List<Portfolio> findByStatusAndIsDeletedFalse(Portfolio.Status status);
   List<Portfolio> findAllByStatusAndIsDeletedFalse(Portfolio.Status status);
+  List<Portfolio> findByParentId(Long parentId);
 }

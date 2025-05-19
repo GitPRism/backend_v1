@@ -1,6 +1,7 @@
 package com.gitprism.GitPRism.portfolios.controller;
 
 import com.gitprism.GitPRism.portfolios.dto.request.PortfolioBatchRequest;
+import com.gitprism.GitPRism.portfolios.dto.request.PortfolioUpdateRequest;
 import com.gitprism.GitPRism.portfolios.dto.response.*;
 import com.gitprism.GitPRism.portfolios.service.PortfolioService;
 import com.gitprism.GitPRism.portfolios.service.PrSummaryService;
@@ -33,7 +34,7 @@ public class PortfolioController {
     ) {
         String githubId = authentication.getName();
         GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
-        PortfolioResponse response = portfolioService.createPortfolio(user.getId(), repoId);
+        PortfolioResponse response = portfolioService.createPortfolio(user.getId(), repoId, null);
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
@@ -99,4 +100,17 @@ public class PortfolioController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
+
+    @PatchMapping("/{portfolioId}")
+    @Operation(summary = "개별 포트폴리오 수정 (연결된 다중 포트폴리오 자동 갱신)")
+    public ResponseEntity<PortfolioResponse> updateIndividualPortfolio(
+            @PathVariable Long portfolioId,
+            @RequestBody PortfolioUpdateRequest request,
+            Authentication authentication
+    ) {
+        String githubId = authentication.getName();
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        PortfolioResponse response = portfolioService.updateIndividualPortfolio(user.getId(), portfolioId, request);
+        return ResponseEntity.status(response.getCode()).body(response);
+    }
 }

@@ -19,7 +19,6 @@ public class Portfolio {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
-  // ManyToOne으로 작성자 참조
   @ManyToOne(fetch = FetchType.LAZY)
   @JoinColumn(name = "user_id", nullable = false)
   private GitHubUser user;
@@ -46,4 +45,8 @@ public class Portfolio {
 
   @Column(name = "repo_org_avatar_url", columnDefinition = "TEXT")
   private String repoOrgAvatarUrl;
+
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "parent_id")
+  private Portfolio parent;
 }
