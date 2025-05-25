@@ -13,6 +13,7 @@ import com.gitprism.GitPRism.portfolios.dto.response.*;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio.Status;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
+import com.gitprism.GitPRism.portfolios.search.PortfolioSearchIndexer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,6 +28,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class PortfolioService {
 
+    private final PortfolioSearchIndexer portfolioSearchIndexer;
     private final CommentRepository commentRepository;
     private final BookmarkRepository bookmarkRepository;
     private final LikeRepository likeRepository;
@@ -90,7 +92,7 @@ public class PortfolioService {
                 .updatedAt(LocalDateTime.now())
                 .build();
         portfolioRepository.save(portfolio);
-
+        portfolioSearchIndexer.index(portfolio);
         PortfolioDetailDto detail = PortfolioDetailDto.builder()
                 .portfolioId(portfolio.getId())
                 .repoName(repo.getRepoName())
@@ -158,6 +160,7 @@ public class PortfolioService {
         combined.setDescription(summaryDescription);
         combined.setUpdatedAt(LocalDateTime.now());
         portfolioRepository.save(combined);
+        portfolioSearchIndexer.index(combined); // 추가
     }
 
 
@@ -262,7 +265,7 @@ public class PortfolioService {
         portfolio.setUpdatedAt(LocalDateTime.now());
 
         portfolioRepository.save(portfolio);
-
+        portfolioSearchIndexer.index(portfolio); // 추가
         String message = (newStatus == Status.PUBLISHED)
                 ? "포트폴리오가 성공적으로 게시되었습니다."
                 : "포트폴리오가 임시 저장되었습니다.";
@@ -314,6 +317,7 @@ public class PortfolioService {
                 .updatedAt(LocalDateTime.now())
                 .build();
 
+        portfolioSearchIndexer.index(combined); // 추가
         return portfolioRepository.save(combined);
     }
 
@@ -342,7 +346,7 @@ public class PortfolioService {
 
         portfolio.setUpdatedAt(LocalDateTime.now());
         portfolioRepository.save(portfolio);
-
+        portfolioSearchIndexer.index(portfolio); // 추가
         Portfolio parent = portfolio.getParent();
         if (parent != null) {
             List<Portfolio> children = portfolioRepository.findByParentId(parent.getId());
@@ -354,6 +358,7 @@ public class PortfolioService {
             parent.setDescription(updatedDescription);
             parent.setUpdatedAt(LocalDateTime.now());
             portfolioRepository.save(parent);
+            portfolioSearchIndexer.index(parent); // 추가
         }
 
         PortfolioDetailDto detail = PortfolioDetailDto.fromEntity(portfolio);
