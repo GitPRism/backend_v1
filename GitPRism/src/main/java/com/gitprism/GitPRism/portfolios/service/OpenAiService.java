@@ -28,25 +28,35 @@ public class OpenAiService {
 
     // ✅ PR 분석 요약 프롬프트
     public PrSummary summarizePr(String title, String body, String diff) {
+        // ✅ null 방어 처리
+        title = (title != null) ? title : "";
+        body = (body != null) ? body : "";
+        diff = (diff != null) ? diff : "";
+
+        // ✅ 토큰 초과 방지를 위한 길이 제한
+        if (title.length() > 300) title = title.substring(0, 300);
+        if (body.length() > 1500) body = body.substring(0, 1500);
+        if (diff.length() > 3000) diff = diff.substring(0, 3000);
+
         String prompt = """
-            아래는 GitHub Pull Request의 제목, 설명, 그리고 코드 변경(diff) 내용입니다.
-            이를 바탕으로 변경의 요지를 요약하고, 중요 코드 또는 기술 스택이 드러나는 부분이 있다면 함께 알려주세요.
+        아래는 GitHub Pull Request의 제목, 설명, 그리고 코드 변경(diff) 내용입니다.
+        이를 바탕으로 변경의 요지를 요약하고, 중요 코드 또는 기술 스택이 드러나는 부분이 있다면 함께 알려주세요.
 
-            출력 형식:
-            {
-              "summary": "...",
-              "importantCode": "..."
-            }
+        출력 형식:
+        {
+          "summary": "...",
+          "importantCode": "..."
+        }
 
-            PR 제목:
-            %s
+        PR 제목:
+        %s
 
-            PR 설명:
-            %s
+        PR 설명:
+        %s
 
-            코드 변경 내용 (diff):
-            %s
-            """.formatted(title, body, diff);
+        코드 변경 내용 (diff):
+        %s
+        """.formatted(title, body, diff);
 
         HttpHeaders headers = new HttpHeaders();
         headers.set("Authorization", "Bearer " + openAiApiKey);
@@ -55,8 +65,8 @@ public class OpenAiService {
         Map<String, Object> requestBody = new HashMap<>();
         requestBody.put("model", "gpt-3.5-turbo");
         requestBody.put("messages", List.of(
-                Map.of("role", "system", "content", "You are a professional software engineer helping write technical summaries."),
-                Map.of("role", "user", "content", prompt)
+            Map.of("role", "system", "content", "You are a professional software engineer helping write technical summaries."),
+            Map.of("role", "user", "content", prompt)
         ));
         requestBody.put("temperature", 0.7);
 
@@ -64,10 +74,10 @@ public class OpenAiService {
 
         try {
             ResponseEntity<Map> response = restTemplate.exchange(
-                    "https://api.openai.com/v1/chat/completions",
-                    HttpMethod.POST,
-                    request,
-                    Map.class
+                "https://api.openai.com/v1/chat/completions",
+                HttpMethod.POST,
+                request,
+                Map.class
             );
 
             Map<String, Object> responseBody = response.getBody();
@@ -76,19 +86,27 @@ public class OpenAiService {
                 if (!choices.isEmpty()) {
                     String content = (String) ((Map<String, Object>) choices.get(0).get("message")).get("content");
 
-                    // JSON 파싱
-                    Map<String, String> result = objectMapper.readValue(content, new TypeReference<>() {});
-                    return new PrSummary(title, body, result.get("summary"), result.get("importantCode"));
+                    try {
+                        Map<String, String> result = objectMapper.readValue(content, new TypeReference<>() {});
+                        return new PrSummary(title, body, result.get("summary"), result.get("importantCode"));
+                    } catch (Exception parseEx) {
+                        log.warn("❌ GPT 응답 JSON 파싱 실패 - 응답 원문:\n{}", content);
+                        throw new RuntimeException("OpenAI 응답 파싱 실패: " + parseEx.getMessage(), parseEx);
+                    }
                 }
             }
         } catch (HttpClientErrorException e) {
-            throw new RuntimeException("OpenAI 호출 실패: " + e.getMessage());
+            log.warn("❌ OpenAI 호출 실패 - 상태: {}, 응답 본문: {}", e.getStatusCode(), e.getResponseBodyAsString());
+            throw new RuntimeException("OpenAI 호출 실패: " + e.getResponseBodyAsString(), e);
         } catch (Exception e) {
-            throw new RuntimeException("OpenAI 응답 파싱 실패: " + e.getMessage());
+            log.warn("❌ OpenAI 처리 중 예외 발생", e);
+            throw new RuntimeException("OpenAI 호출 또는 처리 중 예외 발생: " + e.getMessage(), e);
         }
 
         throw new RuntimeException("OpenAI 응답이 유효하지 않습니다.");
     }
+
+
 
     // 포트폴리오 생성용 프롬프트
     public String buildPortfolioPrompt(String stackList, String formattedSummaries) {

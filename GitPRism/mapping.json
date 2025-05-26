@@ -1,0 +1,37 @@
+{
+  "settings": {
+    "analysis": {
+      "tokenizer": {
+        "nori_tokenizer": {
+          "type": "nori_tokenizer",
+          "decompound_mode": "mixed"
+        }
+      },
+      "filter": {
+        "nori_pos_filter": {
+          "type": "nori_part_of_speech",
+          "stoptags": ["E", "J", "SC", "SE", "SP", "SSO", "SSC", "SF", "SY"]
+        }
+      },
+      "analyzer": {
+        "nori_analyzer": {
+          "type": "custom",
+          "tokenizer": "nori_tokenizer",
+          "filter": ["lowercase", "nori_pos_filter"]
+        }
+      }
+    }
+  },
+  "mappings": {
+    "properties": {
+      "id": { "type": "long" },
+      "title": { "type": "text", "analyzer": "nori_analyzer" },
+      "description": { "type": "text", "analyzer": "nori_analyzer" },
+      "status": { "type": "keyword" },
+      "createdAt": { "type": "date" },
+      "updatedAt": { "type": "date" },
+      "isDeleted": { "type": "boolean" },
+      "repoOrgAvatarUrl": { "type": "text" }
+    }
+  }
+}
