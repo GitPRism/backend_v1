@@ -32,7 +32,9 @@ public class SecurityConfig {
                 "/swagger-ui.html",
                 "/v3/api-docs/**",
                 "/api-docs/**",
-                "/api/v1/github/**"
+                "/api/v1/github/**",
+                "/ws-test.html",
+                "/ws/**"
             ).permitAll()
             .requestMatchers("/api/v1/users/me").hasAuthority("ROLE_USER")
             .requestMatchers("/api/v1/github-users/**").hasAuthority("ROLE_USER")
