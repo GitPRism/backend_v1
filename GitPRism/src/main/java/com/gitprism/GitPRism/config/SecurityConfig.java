@@ -34,7 +34,9 @@ public class SecurityConfig {
                 "/api-docs/**",
                 "/api/v1/github/**",
                 "/ws-test.html",
-                "/ws/**"
+                "/ws/**",
+                "/topic/**",
+                "/app/**"
             ).permitAll()
             .requestMatchers("/api/v1/users/me").hasAuthority("ROLE_USER")
             .requestMatchers("/api/v1/github-users/**").hasAuthority("ROLE_USER")

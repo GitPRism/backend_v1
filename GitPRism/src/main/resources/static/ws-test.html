@@ -27,19 +27,29 @@
     const socket = new SockJS("http://localhost:8080/ws/edit");
     const stompClient = Stomp.over(socket);
 
+    let typingTimeout; // ⬅️ 타이핑 상태 초기화용
+
     stompClient.connect({}, () => {
         log("✅ WebSocket 연결됨");
 
         // 구독
         setTimeout(() => {
             const portfolioId = document.getElementById("portfolioId").value;
+
+            // ✅ 기존 편집 내용 수신
             stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
                 const data = JSON.parse(msg.body);
                 log(`📩 수신: ${data.editorId} - ${data.content}`);
             });
+
+            // ✅ 타이핑 상태 수신 구독
+            stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
+                const data = JSON.parse(msg.body);
+                showTypingIndicator(data.editorName || `👤 ${data.editorId}`);
+            });
         }, 500);
 
-        // 버튼 클릭 시 메시지 전송
+        // ✅ 전송 버튼 클릭 시
         document.getElementById("sendBtn").addEventListener("click", () => {
             const portfolioId = parseInt(document.getElementById("portfolioId").value);
             const editorId = parseInt(document.getElementById("editorId").value);
@@ -54,12 +64,49 @@
 
             log(`📤 전송: ${content}`);
         });
+
+        // ✅ 입력 중 메시지 전송
+        document.getElementById("content").addEventListener("input", () => {
+            const portfolioId = parseInt(document.getElementById("portfolioId").value);
+            const editorId = parseInt(document.getElementById("editorId").value);
+
+            stompClient.send("/app/typing", {}, JSON.stringify({
+                portfolioId,
+                editorId,
+                editorName: `에디터 ${editorId}`,
+                typing: true,
+                timestamp: Date.now()
+            }));
+        });
     });
 
     function log(msg) {
         const logBox = document.getElementById("log");
         logBox.innerHTML += `<div>${msg}</div>`;
         logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function showTypingIndicator(editorName) {
+        const logBox = document.getElementById("log");
+        const indicatorId = "typing-indicator";
+
+        // 기존 indicator 삭제
+        const old = document.getElementById(indicatorId);
+        if (old) old.remove();
+
+        // 새 표시
+        const indicator = document.createElement("div");
+        indicator.id = indicatorId;
+        indicator.innerText = `✏️ ${editorName}님이 입력 중입니다...`;
+        indicator.style.color = "gray";
+        logBox.appendChild(indicator);
+
+        // 2초 후 자동 삭제
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => {
+            const cur = document.getElementById(indicatorId);
+            if (cur) cur.remove();
+        }, 2000);
     }
 </script>
 </body>
