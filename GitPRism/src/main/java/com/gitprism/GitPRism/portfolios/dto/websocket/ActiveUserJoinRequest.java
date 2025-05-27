@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class ActiveUserJoinRequest {
   private Long portfolioId;
   private String editorName;
+  private Long editorId;
 }

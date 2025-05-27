@@ -8,6 +8,7 @@ import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -34,4 +35,18 @@ public class PortfolioCollaboratorService {
 
     return collaboratorRepository.save(collaborator);
   }
+
+  public boolean hasEditorPermission(Long portfolioId, Long userId) {
+    return collaboratorRepository
+        .findByPortfolioIdAndUserId(portfolioId, userId)
+        .map(collaborator -> collaborator.getRole() == PortfolioCollaborator.Role.EDITOR)
+        .orElse(false);
+  }
+
+  public Optional<PortfolioCollaborator.Role> getCollaboratorRole(Long portfolioId, Long userId) {
+    return collaboratorRepository
+        .findByPortfolioIdAndUserId(portfolioId, userId)
+        .map(PortfolioCollaborator::getRole);
+  }
+
 }
