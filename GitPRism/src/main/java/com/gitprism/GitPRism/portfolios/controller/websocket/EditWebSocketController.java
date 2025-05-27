@@ -1,14 +1,14 @@
 package com.gitprism.GitPRism.portfolios.controller.websocket;
 
-import com.gitprism.GitPRism.portfolios.dto.websocket.EditMessage;
-import com.gitprism.GitPRism.portfolios.dto.websocket.EditResponse;
-import com.gitprism.GitPRism.portfolios.dto.websocket.TypingIndicatorMessage;
-import com.gitprism.GitPRism.portfolios.util.PortfolioEditTimestampStore;
-import com.gitprism.GitPRism.portfolios.util.PortfolioEditDraftStore;
+import com.gitprism.GitPRism.portfolios.dto.websocket.*;
+import com.gitprism.GitPRism.portfolios.util.*;
 import lombok.RequiredArgsConstructor;
-import org.springframework.messaging.handler.annotation.MessageMapping;
+import org.springframework.messaging.handler.annotation.*;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Controller
 @RequiredArgsConstructor
@@ -18,20 +18,15 @@ public class EditWebSocketController {
   private final PortfolioEditTimestampStore timestampStore;
   private final PortfolioEditDraftStore draftStore;
 
-  /**
-   * 실시간 편집 메시지 처리
-   */
+  private final Map<Long, Set<String>> activeUsersMap = new ConcurrentHashMap<>();
+
   @MessageMapping("/edit")
   public void handleEdit(EditMessage message) {
     Long portfolioId = message.getPortfolioId();
     Long incomingTimestamp = message.getTimestamp();
 
     Long latestTimestamp = timestampStore.getLatestTimestamp(portfolioId);
-
-    // 🔐 충돌 방지: 이전 편집보다 오래된 경우 무시
-    if (incomingTimestamp < latestTimestamp) {
-      return;
-    }
+    if (incomingTimestamp < latestTimestamp) return;
 
     draftStore.saveDraft(portfolioId, message.getContent());
     timestampStore.updateTimestamp(portfolioId, incomingTimestamp);
@@ -42,16 +37,28 @@ public class EditWebSocketController {
         message.getContent(),
         incomingTimestamp.toString()
     );
-
     messagingTemplate.convertAndSend("/topic/portfolio." + portfolioId, response);
   }
 
-  /**
-   * 입력 중 표시 메시지 처리
-   */
   @MessageMapping("/typing")
-  public void handleTyping(TypingIndicatorMessage message) {
-    Long portfolioId = message.getPortfolioId();
-    messagingTemplate.convertAndSend("/topic/typing." + portfolioId, message);
+  public void handleTyping(TypingIndicatorMessage msg) {
+    messagingTemplate.convertAndSend("/topic/typing." + msg.getPortfolioId(), msg);
+  }
+
+  @MessageMapping("/join")
+  public void handleJoin(ActiveUserJoinRequest joinRequest) {
+    Long portfolioId = joinRequest.getPortfolioId();
+    String editorName = joinRequest.getEditorName();
+
+    activeUsersMap.computeIfAbsent(portfolioId, k -> ConcurrentHashMap.newKeySet()).add(editorName);
+    broadcastActiveUsers(portfolioId);
+  }
+
+  private void broadcastActiveUsers(Long portfolioId) {
+    List<String> users = new ArrayList<>(activeUsersMap.getOrDefault(portfolioId, Set.of()));
+    messagingTemplate.convertAndSend(
+        "/topic/active." + portfolioId,
+        new ActiveUserMessage(portfolioId, users)
+    );
   }
 }

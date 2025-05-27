@@ -10,9 +10,11 @@
         textarea { width: 100%; height: 100px; font-size: 16px; }
         #log { margin-top: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ccc; height: 200px; overflow-y: auto; }
         #sendBtn { margin-top: 10px; padding: 8px 16px; font-size: 16px; }
+        #activeUsers { color: #1a0dab; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
+
 <h2>포트폴리오 실시간 편집 테스트</h2>
 
 <label>포트폴리오 ID: <input type="number" id="portfolioId" value="3"></label><br><br>
@@ -21,64 +23,87 @@
 <textarea id="content" placeholder="내용 입력 후 전송 버튼을 클릭하세요."></textarea><br>
 <button id="sendBtn">전송</button>
 
+<div id="activeUsers">👥 현재 접속 중: (초기화 대기)</div>
 <div id="log"></div>
 
 <script>
-    const socket = new SockJS("http://localhost:8080/ws/edit");
-    const stompClient = Stomp.over(socket);
+    let stompClient = null;
+    let connected = false;
+    let typingTimeout;
 
-    let typingTimeout; // ⬅️ 타이핑 상태 초기화용
+    // 전송 버튼 클릭 시 최초 connect 및 구독
+    document.getElementById("sendBtn").addEventListener("click", () => {
+        const portfolioId = document.getElementById("portfolioId").value;
+        const editorId = document.getElementById("editorId").value;
+        const editorName = `에디터 ${editorId}`;
 
-    stompClient.connect({}, () => {
-        log("✅ WebSocket 연결됨");
+        if (!connected) {
+            const socket = new SockJS("http://localhost:8080/ws/edit");
+            stompClient = Stomp.over(socket);
 
-        // 구독
-        setTimeout(() => {
-            const portfolioId = document.getElementById("portfolioId").value;
+            stompClient.connect(
+                {
+                    portfolioId: portfolioId,
+                    editorName: editorName
+                },
+                () => {
+                    connected = true;
+                    log("✅ WebSocket 연결됨");
 
-            // ✅ 기존 편집 내용 수신
-            stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
-                const data = JSON.parse(msg.body);
-                log(`📩 수신: ${data.editorId} - ${data.content}`);
-            });
+                    // 구독들
+                    stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
+                        const data = JSON.parse(msg.body);
+                        log(`📩 수신: ${data.editorId} - ${data.content}`);
+                    });
 
-            // ✅ 타이핑 상태 수신 구독
-            stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
-                const data = JSON.parse(msg.body);
-                showTypingIndicator(data.editorName || `👤 ${data.editorId}`);
-            });
-        }, 500);
+                    stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
+                        const data = JSON.parse(msg.body);
+                        showTypingIndicator(data.editorName || `👤 ${data.editorId}`);
+                    });
 
-        // ✅ 전송 버튼 클릭 시
-        document.getElementById("sendBtn").addEventListener("click", () => {
-            const portfolioId = parseInt(document.getElementById("portfolioId").value);
-            const editorId = parseInt(document.getElementById("editorId").value);
-            const content = document.getElementById("content").value;
+                    stompClient.subscribe(`/topic/active.${portfolioId}`, (msg) => {
+                        const data = JSON.parse(msg.body);
+                        showActiveUsers(data.activeEditors || []);
+                    });
 
-            stompClient.send("/app/edit", {}, JSON.stringify({
-                portfolioId,
-                editorId,
-                content,
-                timestamp: Date.now()
-            }));
-
-            log(`📤 전송: ${content}`);
-        });
-
-        // ✅ 입력 중 메시지 전송
-        document.getElementById("content").addEventListener("input", () => {
-            const portfolioId = parseInt(document.getElementById("portfolioId").value);
-            const editorId = parseInt(document.getElementById("editorId").value);
-
-            stompClient.send("/app/typing", {}, JSON.stringify({
-                portfolioId,
-                editorId,
-                editorName: `에디터 ${editorId}`,
-                typing: true,
-                timestamp: Date.now()
-            }));
-        });
+                    // 연결 완료 후 메시지 전송
+                    sendEditMessage(portfolioId, editorId);
+                }
+            );
+        } else {
+            sendEditMessage(portfolioId, editorId);
+        }
     });
+
+    // 입력 감지 시 typing 메시지 전송
+    document.getElementById("content").addEventListener("input", () => {
+        if (!stompClient || !connected) return;
+
+        const portfolioId = document.getElementById("portfolioId").value;
+        const editorId = document.getElementById("editorId").value;
+        const editorName = `에디터 ${editorId}`;
+
+        stompClient.send("/app/typing", {}, JSON.stringify({
+            portfolioId: parseInt(portfolioId),
+            editorId: parseInt(editorId),
+            editorName,
+            typing: true,
+            timestamp: Date.now()
+        }));
+    });
+
+    function sendEditMessage(portfolioId, editorId) {
+        const content = document.getElementById("content").value;
+
+        stompClient.send("/app/edit", {}, JSON.stringify({
+            portfolioId: parseInt(portfolioId),
+            editorId: parseInt(editorId),
+            content,
+            timestamp: Date.now()
+        }));
+
+        log(`📤 전송: ${content}`);
+    }
 
     function log(msg) {
         const logBox = document.getElementById("log");
@@ -90,24 +115,31 @@
         const logBox = document.getElementById("log");
         const indicatorId = "typing-indicator";
 
-        // 기존 indicator 삭제
         const old = document.getElementById(indicatorId);
         if (old) old.remove();
 
-        // 새 표시
         const indicator = document.createElement("div");
         indicator.id = indicatorId;
         indicator.innerText = `✏️ ${editorName}님이 입력 중입니다...`;
         indicator.style.color = "gray";
         logBox.appendChild(indicator);
 
-        // 2초 후 자동 삭제
         clearTimeout(typingTimeout);
         typingTimeout = setTimeout(() => {
             const cur = document.getElementById(indicatorId);
             if (cur) cur.remove();
         }, 2000);
     }
+
+    function showActiveUsers(userList) {
+        const el = document.getElementById("activeUsers");
+        if (userList.length === 0) {
+            el.innerText = "👥 현재 접속 중: 없음";
+        } else {
+            el.innerText = "👥 현재 접속 중: " + userList.join(", ");
+        }
+    }
 </script>
+
 </body>
 </html>
