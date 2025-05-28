@@ -60,4 +60,25 @@ public class PortfolioCollaboratorController {
         .map(role -> ResponseEntity.ok(role.name()))
         .orElse(ResponseEntity.notFound().build());
   }
+
+  @Operation(summary = "협업자 권한 수정")
+  @PatchMapping("/{userId}")
+  public ResponseEntity<Void> updateRole(
+      @PathVariable Long portfolioId,
+      @PathVariable Long userId,
+      @RequestParam PortfolioCollaborator.Role role
+  ) {
+    collaboratorService.updateCollaboratorRole(portfolioId, userId, role);
+    return ResponseEntity.ok().build();
+  }
+
+  @Operation(summary = "협업자 삭제")
+  @DeleteMapping("/{userId}")
+  public ResponseEntity<Void> deleteCollaborator(
+      @PathVariable Long portfolioId,
+      @PathVariable Long userId
+  ) {
+    collaboratorService.removeCollaborator(portfolioId, userId);
+    return ResponseEntity.noContent().build();
+  }
 }

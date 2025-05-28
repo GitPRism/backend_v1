@@ -9,5 +9,6 @@ public class EditResponse {
   private Long portfolioId;
   private Long editorId;
   private String content;
-  private String timestamp; // ISO 포맷 예: 2025-05-27T00:00:00Z
+  private String field;     // 추가됨: "title" 또는 "description"
+  private String timestamp; // ISO 포맷 또는 Long timestamp도 가능
 }

@@ -49,4 +49,20 @@ public class PortfolioCollaboratorService {
         .map(PortfolioCollaborator::getRole);
   }
 
+  public void updateCollaboratorRole(Long portfolioId, Long userId, PortfolioCollaborator.Role newRole) {
+    PortfolioCollaborator collaborator = collaboratorRepository
+        .findByPortfolioIdAndUserId(portfolioId, userId)
+        .orElseThrow(() -> new IllegalArgumentException("해당 협업자가 존재하지 않습니다."));
+
+    collaborator.setRole(newRole);
+    collaboratorRepository.save(collaborator);
+  }
+
+  public void removeCollaborator(Long portfolioId, Long userId) {
+    PortfolioCollaborator collaborator = collaboratorRepository
+        .findByPortfolioIdAndUserId(portfolioId, userId)
+        .orElseThrow(() -> new IllegalArgumentException("해당 협업자가 존재하지 않습니다."));
+
+    collaboratorRepository.delete(collaborator);
+  }
 }

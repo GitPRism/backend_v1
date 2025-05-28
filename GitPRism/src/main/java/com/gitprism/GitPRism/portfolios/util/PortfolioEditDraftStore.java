@@ -10,15 +10,27 @@ public class PortfolioEditDraftStore {
 
   private final StringRedisTemplate redisTemplate;
 
-  public void saveDraft(Long portfolioId, String content) {
-    redisTemplate.opsForValue().set(getKey(portfolioId), content);
+  private String titleKey(Long portfolioId) {
+    return "portfolio:" + portfolioId + ":draft:title";
   }
 
-  public String getDraft(Long portfolioId) {
-    return redisTemplate.opsForValue().get(getKey(portfolioId));
+  private String descKey(Long portfolioId) {
+    return "portfolio:" + portfolioId + ":draft:description";
   }
 
-  private String getKey(Long portfolioId) {
-    return "portfolio:" + portfolioId + ":draft";
+  public void saveTitle(Long portfolioId, String title) {
+    redisTemplate.opsForValue().set(titleKey(portfolioId), title);
+  }
+
+  public void saveDescription(Long portfolioId, String description) {
+    redisTemplate.opsForValue().set(descKey(portfolioId), description);
+  }
+
+  public String getTitle(Long portfolioId) {
+    return redisTemplate.opsForValue().get(titleKey(portfolioId));
+  }
+
+  public String getDescription(Long portfolioId) {
+    return redisTemplate.opsForValue().get(descKey(portfolioId));
   }
 }

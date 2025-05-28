@@ -11,5 +11,7 @@ public class EditMessage {
   private Long portfolioId;
   private Long editorId;
   private String content;
-  private Long timestamp; // 💡 EpochMillis (System.currentTimeMillis())
+  private String field; // "title" 또는 "description"
+  private Long timestamp;
 }
+

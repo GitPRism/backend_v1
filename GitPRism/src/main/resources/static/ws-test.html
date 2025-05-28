@@ -20,6 +20,13 @@
 <label>포트폴리오 ID: <input type="number" id="portfolioId" value="3"></label><br><br>
 <label>에디터 ID: <input type="number" id="editorId" value="1"></label><br><br>
 
+<label>필드 선택:
+    <select id="field">
+        <option value="title">제목 (title)</option>
+        <option value="description">설명 (description)</option>
+    </select>
+</label><br><br>
+
 <textarea id="content" placeholder="내용 입력 후 전송 버튼을 클릭하세요."></textarea><br>
 <button id="sendBtn">전송</button>
 
@@ -31,7 +38,6 @@
     let connected = false;
     let typingTimeout;
 
-    // 전송 버튼 클릭 시 최초 connect 및 구독
     document.getElementById("sendBtn").addEventListener("click", () => {
         const portfolioId = document.getElementById("portfolioId").value;
         const editorId = document.getElementById("editorId").value;
@@ -41,41 +47,39 @@
             const socket = new SockJS("http://localhost:8080/ws/edit");
             stompClient = Stomp.over(socket);
 
-            stompClient.connect(
-                {
-                    portfolioId: portfolioId,
+            stompClient.connect({}, () => {
+                connected = true;
+                log("✅ WebSocket 연결됨");
+
+                stompClient.send("/app/join", {}, JSON.stringify({
+                    portfolioId: parseInt(portfolioId),
+                    editorId: parseInt(editorId),
                     editorName: editorName
-                },
-                () => {
-                    connected = true;
-                    log("✅ WebSocket 연결됨");
+                }));
 
-                    // 구독들
-                    stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
-                        const data = JSON.parse(msg.body);
-                        log(`📩 수신: ${data.editorId} - ${data.content}`);
-                    });
+                stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
+                    const data = JSON.parse(msg.body);
+                    const field = data.field || "unknown";
+                    log(`📩 수신 (${field}): ${data.editorId} - ${data.content}`);
+                });
 
-                    stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
-                        const data = JSON.parse(msg.body);
-                        showTypingIndicator(data.editorName || `👤 ${data.editorId}`);
-                    });
+                stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
+                    const data = JSON.parse(msg.body);
+                    showTypingIndicator(data.editorName || `👤 ${data.editorId}`);
+                });
 
-                    stompClient.subscribe(`/topic/active.${portfolioId}`, (msg) => {
-                        const data = JSON.parse(msg.body);
-                        showActiveUsers(data.activeEditors || []);
-                    });
+                stompClient.subscribe(`/topic/active.${portfolioId}`, (msg) => {
+                    const data = JSON.parse(msg.body);
+                    showActiveUsers(data.activeEditors || []);
+                });
 
-                    // 연결 완료 후 메시지 전송
-                    sendEditMessage(portfolioId, editorId);
-                }
-            );
+                sendEditMessage(portfolioId, editorId);
+            });
         } else {
             sendEditMessage(portfolioId, editorId);
         }
     });
 
-    // 입력 감지 시 typing 메시지 전송
     document.getElementById("content").addEventListener("input", () => {
         if (!stompClient || !connected) return;
 
@@ -94,15 +98,17 @@
 
     function sendEditMessage(portfolioId, editorId) {
         const content = document.getElementById("content").value;
+        const field = document.getElementById("field").value;
 
         stompClient.send("/app/edit", {}, JSON.stringify({
             portfolioId: parseInt(portfolioId),
             editorId: parseInt(editorId),
-            content,
+            field: field,
+            content: content,
             timestamp: Date.now()
         }));
 
-        log(`📤 전송: ${content}`);
+        log(`📤 전송 (${field}): ${content}`);
     }
 
     function log(msg) {
