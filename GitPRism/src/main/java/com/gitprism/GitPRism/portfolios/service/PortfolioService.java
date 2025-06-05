@@ -16,6 +16,8 @@ import com.gitprism.GitPRism.portfolios.repository.PortfolioRepository;
 import com.gitprism.GitPRism.portfolios.search.PortfolioSearchIndexer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -124,6 +126,7 @@ public class PortfolioService {
 
         Portfolio combined = createCombinedPortfolio(userId, new ArrayList<>());
 
+
         for (Long repoId : repoIds) {
             try {
                 PortfolioResponse created = createPortfolio(userId, repoId, combined);
@@ -144,9 +147,9 @@ public class PortfolioService {
                 201,
                 results.size(),
                 results
-
         );
     }
+
 
     private void updateCombinedPortfolioFromDetails(Portfolio combined, List<PortfolioDetailDto> details) {
         if (details.isEmpty()) return;
@@ -164,7 +167,7 @@ public class PortfolioService {
     }
 
 
-    public PortfolioDetailResponse getPortfolioDetail(Long portfolioId, Long userId) {
+    public CombinedPortfolioDetailResponse getPortfolioDetail(Long portfolioId, Long userId) {
         Portfolio portfolio = portfolioRepository.findByIdAndIsDeletedFalse(portfolioId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 포트폴리오가 존재하지 않습니다."));
 
@@ -173,69 +176,60 @@ public class PortfolioService {
         }
 
         GitHubUser user = gitHubUserService.findEntityById(userId);
+
         int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         int contentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(portfolioId);
         boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
+        boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
 
-        return PortfolioDetailResponse.builder()
+        // ✅ 하위 포트폴리오 조회
+        List<Portfolio> children = portfolioRepository.findByParentId(portfolio.getId());
+        List<SubPortfolioDto> data = children.stream()
+                .map(p -> SubPortfolioDto.builder()
+                        .portfolioId(p.getId())
+                        .title(p.getTitle())
+                        .description(p.getDescription())
+                        .build())
+                .toList();
+
+        return CombinedPortfolioDetailResponse.builder()
                 .portfolioId(portfolio.getId())
                 .username(portfolio.getUser().getUsername())
                 .avatarUrl(portfolio.getUser().getAvatarUrl())
+                .repoOrgAvatarUrl(portfolio.getRepoOrgAvatarUrl())
                 .title(portfolio.getTitle())
-                .description(portfolio.getDescription())
                 .updatedAt(portfolio.getUpdatedAt())
                 .likeCount(likeCount)
                 .bookmarkCount(bookmarkCount)
                 .contentCount(contentCount)
                 .bookmarked(bookmarked)
+                .liked(liked)
+                .data(data)
                 .build();
     }
 
-    public List<PortfolioDetailDto> getPortfoliosByUser(Long userId) {
+
+    public PortfolioBatchResponse getMyPortfolios(Long userId, Pageable pageable) {
+        Page<Portfolio> page = portfolioRepository.findByUserIdAndIsDeletedFalseAndParentIsNull(userId, pageable);
         GitHubUser user = gitHubUserService.findEntityById(userId);
-        List<Portfolio> portfolios = portfolioRepository.findByUserAndIsDeletedFalse(user);
-
-        return portfolios.stream()
-                .map(p -> PortfolioDetailDto.builder()
-                        .portfolioId(p.getId())
-                        .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
-                        .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
-                        .username(p.getUser().getUsername())
-                        .avatarUrl(p.getUser().getAvatarUrl())
-                        .repoOrgAvatarUrl(
-                                p.getRepo() != null && p.getRepo().getOrgAvatarUrl() != null
-                                        ? p.getRepo().getOrgAvatarUrl()
-                                        : p.getRepoOrgAvatarUrl()
-                        )
-                        .title(p.getTitle())
-                        .description(p.getDescription())
-                        .status(p.getStatus().name().toLowerCase())
-                        .createdAt(p.getCreatedAt())
-                        .build())
-                .toList();
-    }
-
-    public List<PortfolioDetailDto> getAllPublicPortfolios(Long userId) {
-        GitHubUser user = gitHubUserService.findEntityById(userId);
-        List<Portfolio> published = portfolioRepository.findByStatusAndIsDeletedFalse(Status.PUBLISHED);
 
 
-        return published.stream()
+        List<PortfolioDetailDto> dtoList = page.getContent().stream()
                 .map(p -> {
-                    boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
                     int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
                     int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    int commentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
                     boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, p);
+
                     return PortfolioDetailDto.builder()
                             .portfolioId(p.getId())
+                            .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
+                            .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
                             .username(p.getUser().getUsername())
                             .avatarUrl(p.getUser().getAvatarUrl())
-                            .repoOrgAvatarUrl(
-                                    p.getRepo() != null && p.getRepo().getOrgAvatarUrl() != null
-                                            ? p.getRepo().getOrgAvatarUrl()
-                                            : p.getRepoOrgAvatarUrl()
-                            )
+                            .repoOrgAvatarUrl(p.getRepoOrgAvatarUrl())
                             .title(p.getTitle())
                             .description(p.getDescription())
                             .status(p.getStatus().name().toLowerCase())
@@ -244,10 +238,65 @@ public class PortfolioService {
                             .liked(liked)
                             .likeCount(likeCount)
                             .bookmarkCount(bookmarkCount)
+                            .commentCount(commentCount)
+                            .parentId(p.getParent() != null ? p.getParent().getId() : null)
                             .build();
                 })
-                .toList();
+                .collect(Collectors.toList());
+
+        return new PortfolioBatchResponse(
+                "내 포트폴리오 조회 성공",
+                null,
+                null,
+                200,
+                dtoList.size(),
+                dtoList
+        );
     }
+
+
+
+
+    public PortfolioBatchResponse getPublicPortfolios(Pageable pageable) {
+        Page<Portfolio> page = portfolioRepository.findPublicPortfoliosWithPaging(pageable);
+
+        List<PortfolioDetailDto> dtoList = page.getContent().stream()
+                .map(p -> {
+                    int likeCount = likeRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    int bookmarkCount = bookmarkRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+                    int commentCount = commentRepository.countByPortfolioIdAndIsDeletedFalse(p.getId());
+
+                    return PortfolioDetailDto.builder()
+                            .portfolioId(p.getId())
+                            .repoName(p.getRepo() != null ? p.getRepo().getRepoName() : null)
+                            .repoUrl(p.getRepo() != null ? p.getRepo().getUrl() : null)
+                            .username(p.getUser().getUsername())
+                            .avatarUrl(p.getUser().getAvatarUrl())
+                            .repoOrgAvatarUrl(p.getRepoOrgAvatarUrl())
+                            .title(p.getTitle())
+                            .description(p.getDescription())
+                            .status(p.getStatus().name().toLowerCase())
+                            .createdAt(p.getCreatedAt())
+                            .bookmarked(false)
+                            .liked(false)
+                            .likeCount(likeCount)
+                            .bookmarkCount(bookmarkCount)
+                            .commentCount(commentCount)
+                            .build();
+                })
+                .collect(Collectors.toList());
+
+        return new PortfolioBatchResponse(
+                "공개 포트폴리오 조회 성공",
+                null,
+                null,
+                200,
+                dtoList.size(),
+                dtoList
+        );
+    }
+
+
 
     public PortfolioResponse togglePortfolioStatus(Long userId, Long portfolioId) {
         Portfolio portfolio = portfolioRepository.findByIdAndIsDeletedFalse(portfolioId)
@@ -296,7 +345,7 @@ public class PortfolioService {
         for (int i = 0; i < detailList.size(); i++) {
             PortfolioDetailDto dto = detailList.get(i);
             if (i == 0) {
-                firstAvatarUrl = dto.getAvatarUrl();
+                firstAvatarUrl = dto.getRepoOrgAvatarUrl();
             }
 
             fullDescription.append("""
