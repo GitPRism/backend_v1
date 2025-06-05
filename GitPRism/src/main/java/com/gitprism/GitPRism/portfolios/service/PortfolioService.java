@@ -141,13 +141,18 @@ public class PortfolioService {
         String representativeImageUrl = results.isEmpty() ? null : results.get(0).getAvatarUrl();
 
         return new PortfolioBatchResponse(
-                "포트폴리오 %d개 생성 완료".formatted(results.size()),
-                combined.getId(),
-                representativeImageUrl,
-                201,
+                        "포트폴리오 %d개 생성 완료".formatted(results.size()),
+                        combined.getId(),
+                        representativeImageUrl,
+                        201,
+                        results.size(),
+                0,
                 results.size(),
+                1,
+                results.size(),
+                false,
                 results
-        );
+                );
     }
 
 
@@ -183,7 +188,6 @@ public class PortfolioService {
         boolean bookmarked = bookmarkRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
         boolean liked = likeRepository.existsByUserAndPortfolioAndIsDeletedFalse(user, portfolio);
 
-        // ✅ 하위 포트폴리오 조회
         List<Portfolio> children = portfolioRepository.findByParentId(portfolio.getId());
         List<SubPortfolioDto> data = children.stream()
                 .map(p -> SubPortfolioDto.builder()
@@ -245,13 +249,18 @@ public class PortfolioService {
                 .collect(Collectors.toList());
 
         return new PortfolioBatchResponse(
-                "내 포트폴리오 조회 성공",
-                null,
-                null,
-                200,
-                dtoList.size(),
+                        "내 포트폴리오 조회 성공",
+                        null,
+                        null,
+                        200,
+                        page.getNumberOfElements(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalPages(),
+                page.getTotalElements(),
+                page.hasNext(),
                 dtoList
-        );
+                );
     }
 
 
@@ -287,13 +296,18 @@ public class PortfolioService {
                 .collect(Collectors.toList());
 
         return new PortfolioBatchResponse(
-                "공개 포트폴리오 조회 성공",
-                null,
-                null,
-                200,
-                dtoList.size(),
+                        "공개 포트폴리오 조회 성공",
+                        null,
+                        null,
+                        200,
+                        page.getNumberOfElements(),
+                page.getNumber(),
+                page.getSize(),
+                page.getTotalPages(),
+                page.getTotalElements(),
+                page.hasNext(),
                 dtoList
-        );
+                );
     }
 
 
