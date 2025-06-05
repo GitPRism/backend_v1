@@ -33,6 +33,7 @@ public class SecurityConfig {
                 "/v3/api-docs/**",
                 "/api-docs/**",
                 "/api/v1/github/**",
+                "/api/v1/portfolios/**",
                 "/ws-test.html",
                 "/ws/**",
                 "/topic/**",
@@ -49,7 +50,7 @@ public class SecurityConfig {
   @Bean
   public CorsConfigurationSource corsConfigurationSource() {
       CorsConfiguration configuration = new CorsConfiguration();
-      configuration.setAllowedOrigins(List.of("http://localhost:5173")); // ✅ 프론트엔드 주소 설정
+      configuration.setAllowedOrigins(List.of("http://localhost:5173"));
       configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
       configuration.setAllowedHeaders(List.of("*"));
       configuration.setAllowCredentials(true);
