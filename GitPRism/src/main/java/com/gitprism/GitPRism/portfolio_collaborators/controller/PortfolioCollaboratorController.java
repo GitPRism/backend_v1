@@ -4,11 +4,18 @@ import com.gitprism.GitPRism.portfolio_collaborators.dto.request.AddCollaborator
 import com.gitprism.GitPRism.portfolio_collaborators.dto.response.PortfolioCollaboratorResponse;
 import com.gitprism.GitPRism.portfolio_collaborators.entity.PortfolioCollaborator;
 import com.gitprism.GitPRism.portfolio_collaborators.service.PortfolioCollaboratorService;
+import com.gitprism.GitPRism.github_users.entity.GitHubUser;
+import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
+
+import java.util.Map;
+import java.util.NoSuchElementException;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.security.core.Authentication;
 
 @RestController
 @RequiredArgsConstructor
@@ -17,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 public class PortfolioCollaboratorController {
 
   private final PortfolioCollaboratorService collaboratorService;
+  private final GitHubUserRepository userRepository;
 
   @PostMapping
   @Operation(summary = "협업자 추가", description = "포트폴리오에 협업자를 추가합니다.")
@@ -80,5 +88,32 @@ public class PortfolioCollaboratorController {
   ) {
     collaboratorService.removeCollaborator(portfolioId, userId);
     return ResponseEntity.noContent().build();
+  }
+
+  @PostMapping("/invite")
+  public ResponseEntity<?> sendInviteNotification(
+      @RequestParam Long inviteeId,
+      @RequestParam Long portfolioId,
+      Authentication authentication
+  ) {
+    String githubId = authentication.getName();
+    GitHubUser inviter = userRepository.findByGithubId(githubId)
+        .orElseThrow(() -> new NoSuchElementException("인증된 사용자를 찾을 수 없습니다."));
+
+    // ✅ 여기서 service 메서드 호출로 변경
+    collaboratorService.sendInviteNotification(
+        inviteeId,
+        inviter.getId(),
+        portfolioId,
+        inviter.getUsername()
+    );
+
+    return ResponseEntity.ok(
+        Map.of(
+            "message", "초대 알림 전송 성공",
+            "status", 200,
+            "portfolioId", portfolioId
+        )
+    );
   }
 }

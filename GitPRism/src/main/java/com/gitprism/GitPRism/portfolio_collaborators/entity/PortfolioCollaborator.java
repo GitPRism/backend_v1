@@ -2,6 +2,8 @@ package com.gitprism.GitPRism.portfolio_collaborators.entity;
 
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
+import com.gitprism.GitPRism.portfolio_collaborators.entity.PortfolioCollaborator;
+
 import jakarta.persistence.*;
 import lombok.*;
 

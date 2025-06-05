@@ -9,10 +9,13 @@ import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import lombok.RequiredArgsConstructor;
+import lombok.RequiredArgsConstructor ;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import com.gitprism.GitPRism.notification.entity.Notification;
+import com.gitprism.GitPRism.notification.entity.NotificationType;
+import com.gitprism.GitPRism.notification.repository.NotificationRepository;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -21,7 +24,7 @@ import java.util.NoSuchElementException;
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {
-
+  private final NotificationRepository notificationRepository;
   private final NotificationService notificationService;
   private final GitHubUserRepository userRepository;
 

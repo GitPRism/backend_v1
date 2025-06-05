@@ -2,6 +2,10 @@ package com.gitprism.GitPRism.notification.entity;
 
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.portfolios.entity.Portfolio;
+import com.gitprism.GitPRism.notification.entity.Notification;
+import com.gitprism.GitPRism.notification.entity.NotificationType;
+import com.gitprism.GitPRism.notification.repository.NotificationRepository;
+
 import jakarta.persistence.*;
 import lombok.*;
 

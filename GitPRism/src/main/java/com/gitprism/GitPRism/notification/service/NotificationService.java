@@ -8,7 +8,7 @@ import com.gitprism.GitPRism.notification.entity.NotificationType;
 import com.gitprism.GitPRism.notification.repository.NotificationRepository;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
 import com.gitprism.GitPRism.notification.dto.NotificationListResponse;
-
+import com.gitprism.GitPRism.portfolios.entity.Portfolio;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -117,5 +117,4 @@ public class NotificationService {
         "count", unreadNotifications.size()
     );
   }
-
 }
