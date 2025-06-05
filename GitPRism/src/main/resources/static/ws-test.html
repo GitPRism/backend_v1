@@ -2,23 +2,24 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <title>포트폴리오 실시간 편집 테스트</title>
+    <title>포트폴리오 실시간 편집 & 초대 테스트</title>
     <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
     <style>
         body { font-family: sans-serif; padding: 20px; }
         textarea { width: 100%; height: 100px; font-size: 16px; }
         #log { margin-top: 20px; background: #f9f9f9; padding: 10px; border: 1px solid #ccc; height: 200px; overflow-y: auto; }
-        #sendBtn { margin-top: 10px; padding: 8px 16px; font-size: 16px; }
+        #sendBtn, #inviteBtn { margin-top: 10px; padding: 8px 16px; font-size: 16px; }
         #activeUsers { color: #1a0dab; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
 
-<h2>포트폴리오 실시간 편집 테스트</h2>
+<h2>포트폴리오 실시간 편집 & 초대 테스트</h2>
 
 <label>포트폴리오 ID: <input type="number" id="portfolioId" value="3"></label><br><br>
 <label>에디터 ID: <input type="number" id="editorId" value="1"></label><br><br>
+<label>초대할 사용자 ID (inviteeId): <input type="number" id="inviteeId" value="2"></label><br><br>
 
 <label>필드 선택:
     <select id="field">
@@ -28,7 +29,8 @@
 </label><br><br>
 
 <textarea id="content" placeholder="내용 입력 후 전송 버튼을 클릭하세요."></textarea><br>
-<button id="sendBtn">전송</button>
+<button id="sendBtn">✏️ 편집 전송</button>
+<button id="inviteBtn">📨 초대 전송</button>
 
 <div id="activeUsers">👥 현재 접속 중: (초기화 대기)</div>
 <div id="log"></div>
@@ -44,7 +46,9 @@
         const editorName = `에디터 ${editorId}`;
 
         if (!connected) {
-            const socket = new SockJS("http://localhost:8080/ws/edit");
+            // ✅ 수정된 부분: localStorage에서 토큰을 가져옴
+            const jwtToken = localStorage.getItem("jwt") || "<여기에 JWT 토큰 삽입>";
+            const socket = new SockJS(`http://localhost:8080/ws/edit?token=${jwtToken}`);
             stompClient = Stomp.over(socket);
 
             stompClient.connect({}, () => {
@@ -59,8 +63,7 @@
 
                 stompClient.subscribe(`/topic/portfolio.${portfolioId}`, (msg) => {
                     const data = JSON.parse(msg.body);
-                    const field = data.field || "unknown";
-                    log(`📩 수신 (${field}): ${data.editorId} - ${data.content}`);
+                    log(`📩 수신 (${data.field}): ${data.editorId} - ${data.content}`);
                 });
 
                 stompClient.subscribe(`/topic/typing.${portfolioId}`, (msg) => {
@@ -71,6 +74,11 @@
                 stompClient.subscribe(`/topic/active.${portfolioId}`, (msg) => {
                     const data = JSON.parse(msg.body);
                     showActiveUsers(data.activeEditors || []);
+                });
+
+                stompClient.subscribe(`/topic/invite.${portfolioId}`, (msg) => {
+                    const data = JSON.parse(msg.body);
+                    log(`📥 초대 메시지 수신: inviteeId=${data.inviteeId}, portfolioId=${data.portfolioId}`);
                 });
 
                 sendEditMessage(portfolioId, editorId);
@@ -94,6 +102,24 @@
             typing: true,
             timestamp: Date.now()
         }));
+    });
+
+    document.getElementById("inviteBtn").addEventListener("click", () => {
+        if (!stompClient || !connected) {
+            log("❌ 먼저 WebSocket 연결 후 사용하세요.");
+            return;
+        }
+
+        const portfolioId = document.getElementById("portfolioId").value;
+        const inviteeId = document.getElementById("inviteeId").value;
+
+        const inviteMsg = {
+            portfolioId: parseInt(portfolioId),
+            inviteeId: parseInt(inviteeId)
+        };
+
+        stompClient.send("/app/invite", {}, JSON.stringify(inviteMsg));
+        log(`📨 초대 전송됨: portfolioId=${portfolioId}, inviteeId=${inviteeId}`);
     });
 
     function sendEditMessage(portfolioId, editorId) {

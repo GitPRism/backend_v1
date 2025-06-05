@@ -4,6 +4,8 @@ import com.gitprism.GitPRism.notification.entity.Notification;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import com.gitprism.GitPRism.github_users.entity.GitHubUser;
+import com.gitprism.GitPRism.notification.entity.NotificationType;
+import com.gitprism.GitPRism.notification.repository.NotificationRepository;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
   List<Notification> findAllByUserIdAndIsDeletedFalseOrderByCreatedAtDesc(Long userId);

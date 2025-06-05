@@ -12,7 +12,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
+import com.gitprism.GitPRism.notification.service.NotificationService;
+import com.gitprism.GitPRism.portfolio_collaborators.entity.PortfolioCollaborator;
+import com.gitprism.GitPRism.github_users.entity.GitHubUser;
+import com.gitprism.GitPRism.github_users.repository.GitHubUserRepository;
 
+import java.security.Principal;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -30,9 +35,9 @@ public class EditWebSocketController {
   private final PortfolioEditDraftStore draftStore;
   private final EditHistoryRedisService editHistoryRedisService;
   private final PortfolioCollaboratorService collaboratorService;
-
+  private final NotificationService notificationService;
   private final Map<Long, Set<String>> activeUsersMap = new ConcurrentHashMap<>();
-
+  private final GitHubUserRepository userRepository;
   /**
    * 클라이언트로부터 /app/edit 메시지를 수신하고, 편집 내용을 Redis에 저장 및 브로드캐스트합니다.
    */
@@ -122,5 +127,36 @@ public class EditWebSocketController {
         new ActiveUserMessage(portfolioId, users)
     );
     log.info("🔄 접속 사용자 목록 전송: {}", users);
+  }
+
+  @MessageMapping("/invite")
+  public void handleInvite(InviteMessage msg, Principal principal) {
+    Long portfolioId = msg.getPortfolioId();
+    Long inviteeId = msg.getInviteeId();
+
+    // inviterId는 Principal에서 꺼낸 GitHub ID로 조회
+    GitHubUser inviter = userRepository.findByGithubId(principal.getName())
+        .orElseThrow(() -> new IllegalArgumentException("인증된 사용자를 찾을 수 없습니다."));
+    Long inviterId = inviter.getId();
+    String inviterName = inviter.getUsername();
+
+    if (!collaboratorService.hasEditorPermission(portfolioId, inviterId)) {
+      log.warn("❌ 초대 권한 없음: inviterId={}, portfolioId={}", inviterId, portfolioId);
+      return;
+    }
+
+    if (collaboratorService.isAlreadyCollaborator(portfolioId, inviteeId)) {
+      log.info("ℹ️ 이미 협업자입니다: inviteeId={}, portfolioId={}", inviteeId, portfolioId);
+      return;
+    }
+
+    // 🔔 알림 전송
+    collaboratorService.sendInviteNotification(inviteeId, inviterId, portfolioId, inviterName);
+
+    // 👥 협업자 추가
+    collaboratorService.addCollaborator(portfolioId, inviteeId, PortfolioCollaborator.Role.VIEWER);
+
+    // 📢 초대 메시지 전송 (optional)
+    messagingTemplate.convertAndSend("/topic/invite." + portfolioId, msg);
   }
 }
