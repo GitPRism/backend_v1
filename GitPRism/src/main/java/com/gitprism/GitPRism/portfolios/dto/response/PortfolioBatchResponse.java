@@ -14,5 +14,10 @@ public class PortfolioBatchResponse {
     private String representativeImageUrl;
     private int code;
     private int count;
+    private int page;
+    private int pageSize;
+    private int totalPages;
+    private long totalCount;
+    private boolean hasNext;
     private List<PortfolioDetailDto> data;
 }
