@@ -16,6 +16,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/v1/portfolios")
 @RequiredArgsConstructor
@@ -51,18 +54,19 @@ public class PortfolioController {
         return ResponseEntity.status(response.getCode()).body(response);
     }
 
-    @GetMapping("/my")
-    @Operation(summary = "내 포트폴리오 전체 조회")
-    public ResponseEntity<PortfolioBatchResponse> getMyPortfolios(
-            @RequestParam(defaultValue = "0") int page,
-            Authentication authentication
-    ) {
-        String githubId = authentication.getName();
-        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
-        Long userId = user.getId();
 
-        Pageable pageable = PageRequest.of(page, 6, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return ResponseEntity.ok(portfolioService.getMyPortfolios(userId, pageable));
+    @GetMapping("/me")
+    @Operation(summary = "내 포트폴리오 목록 조회", description = "로그인한 사용자의 포트폴리오를 조회합니다.")
+    public ResponseEntity<List<PortfolioDetailDto>> getMyPortfolios(Authentication authentication) {
+        String githubId = authentication.getName();
+
+        if (githubId.equals("mock") || githubId.equals("12345678")) {
+            return ResponseEntity.ok(portfolioService.getPortfoliosByUser(1L));
+        }
+
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        List<PortfolioDetailDto> portfolios = portfolioService.getPortfoliosByUser(user.getId());
+        return ResponseEntity.ok(portfolios);
     }
 
 
@@ -79,19 +83,17 @@ public class PortfolioController {
         return ResponseEntity.ok(portfolioService.getPortfolioDetail(portfolioId, userId));
     }
 
-
     @Operation(summary = "전체 공개 포트폴리오 목록 조회", description = "PUBLISHED 상태의 포트폴리오 전체를 반환합니다.")
     @GetMapping("/public")
-    public ResponseEntity<PortfolioBatchResponse> getPublicPortfolios(
-            @RequestParam(defaultValue = "0") int page
+    public ResponseEntity<Map<String, List<PortfolioDetailDto>>> getAllPublicPortfolios(
+            Authentication authentication
     ) {
-        int size = 6;
-        Sort sort = Sort.by(Sort.Direction.DESC, "createdAt"); // 원하는 정렬 기준
-        Pageable pageable = PageRequest.of(page, size, sort);
-
-        PortfolioBatchResponse response = portfolioService.getPublicPortfolios(pageable);
-        return ResponseEntity.ok(response);
+        String githubId = authentication.getName();
+        GitHubUserResponseDto user = gitHubUserService.findByGithubId(githubId);
+        List<PortfolioDetailDto> data = portfolioService.getAllPublicPortfolios(user.getId());
+        return ResponseEntity.ok(Map.of("data", data));
     }
+
 
     @Operation(summary = "포트폴리오 게시 상태 토글", description = "포트폴리오 상태를 PUBLISHED ↔ DRAFT 로 변경합니다.")
     @PutMapping("/{portfolioId}")
