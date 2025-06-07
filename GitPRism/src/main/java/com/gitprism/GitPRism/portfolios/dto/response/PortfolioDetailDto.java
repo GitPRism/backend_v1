@@ -35,7 +35,7 @@ public class PortfolioDetailDto {
                 .repoUrl(entity.getRepo() != null ? entity.getRepo().getUrl() : null)
                 .username(entity.getUser().getUsername())
                 .avatarUrl(entity.getUser().getAvatarUrl())
-                .repoOrgAvatarUrl(entity.getRepoOrgAvatarUrl())
+                .repoOrgAvatarUrl(entity.getRepo() != null ? entity.getRepo().getOrgAvatarUrl() : null)
                 .title(entity.getTitle())
                 .description(entity.getDescription())
                 .status(entity.getStatus().name().toLowerCase())
